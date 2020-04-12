@@ -1,0 +1,11 @@
+node_modules/
+dist-client/**
+dist-server/**
+dist-nodecg/ctwc-japan-lite/dashboard/*
+dist-nodecg/ctwc-japan-lite/extension/*
+dist-nodecg/ctwc-japan-lite/graphics/*
+
+.cache/
+*.code-workspace
+*.log
+!.gitkeep

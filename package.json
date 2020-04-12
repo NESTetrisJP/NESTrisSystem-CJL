@@ -1,0 +1,32 @@
+{
+  "name": "nestrisclient-ctwcjapan",
+  "version": "1.0.0",
+  "description": "Hyperapp Sample Project with TypeScript.",
+  "main": "index.js",
+  "scripts": {
+    "watch:server": "parcel watch --target node --out-dir dist-server ./src/server/testClient.ts ./src/server/server.ts",
+    "watch:nodecg:dashboard": "parcel watch --out-dir dist-nodecg/ctwc-japan-lite/dashboard ./src/nodecg/dashboard/panel.html",
+    "watch:nodecg:extension": "parcel watch --target node --out-dir dist-nodecg/ctwc-japan-lite/extension ./src/nodecg/extension/index.js",
+    "watch:nodecg:graphics": "parcel watch --out-dir dist-nodecg/ctwc-japan-lite/graphics ./src/nodecg/graphics/index.html",
+    "watch:nodecg:all": "npm-run-all -p watch:nodecg:dashboard watch:nodecg:extension watch:nodecg:graphics",
+    "dev:client": "parcel --out-dir dist-client src/client/index.html",
+    "dev:all": "npm-run-all -p watch:server watch:nodecg:all dev:client",
+    "run:server": "node dist-server/server.js",
+    "run:server:testClient": "node dist-server/testClient.js"
+  },
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@types/ws": "^7.2.3",
+    "await-semaphore": "^0.1.3",
+    "encoding-japanese": "^1.0.30",
+    "hyperapp": "^2.0.4",
+    "npm-run-all": "^4.1.5",
+    "parcel": "^1.12.4",
+    "simple-node-logger": "^18.12.24",
+    "ts-token-generator": "^1.0.4"
+  },
+  "devDependencies": {
+    "typescript": "^3.8.3"
+  }
+}
