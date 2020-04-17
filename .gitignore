@@ -5,6 +5,7 @@ dist-nodecg/ctwc-japan-lite/dashboard/*
 dist-nodecg/ctwc-japan-lite/extension/*
 dist-nodecg/ctwc-japan-lite/graphics/*
 
+loginlist.json
 .cache/
 *.code-workspace
 *.log

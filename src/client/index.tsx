@@ -1,11 +1,6 @@
 import { h, app } from "hyperapp";
 import { Mutex } from "await-semaphore"
 
-// import Encoding from "encoding-japanese"
-
-// Workaround
-window.h = h;
-
 import unicodeToKuten from "../unicode-to-kuten.json"
 import asciiFont from "../common/images/asciifont.png"
 import blocks from "../common/images/blocks.png"
@@ -91,7 +86,9 @@ app({
     delay(CountUp, { timeout: 1000 })
   ],
   view: state => (
-    <canvas id="main" width="640" height="360"></canvas>
+    <body>
+      <canvas id="main" width="640" height="360"></canvas>
+    </body>
   ),
   subscriptions: state => state.auto && tick(CountUp, { interval: 1000 }),
   node: document.body
@@ -157,7 +154,7 @@ window.onload = async () => {
     }
   }
 
-  const sock = new WebSocket("ws://127.0.0.1:5042")
+  const sock = new WebSocket(`ws://${location.hostname}:5042`)
 
   // const users = new Map<string, number>()
   let users = []

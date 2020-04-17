@@ -1,7 +1,9 @@
 import net from "net"
 import ws from "ws"
+import fs from "fs"
 // import { TokenGenerator } from "ts-token-generator"
 import { Mutex } from "await-semaphore"
+import { encode, decode } from "../common/network-codec"
 
 import SimpleNodeLogger from "simple-node-logger"
 const logger = SimpleNodeLogger.createSimpleLogger("server.log")
@@ -10,6 +12,11 @@ logger.info("NESTrisSystem Server v0.1.0")
 // const tokenGenerator = new TokenGenerator()
 
 const loginList = new Map<string, string>()
+const loginListFile = JSON.parse(fs.readFileSync("loginlist.json", "utf8"))
+loginListFile.forEach(e => {
+  loginList.set(e.userName, e.key)
+})
+
 const activeUsers = new Map<string, { socket: net.Socket }>()
 const activeUsersMutex = new Mutex()
 
@@ -48,14 +55,18 @@ net.createServer(socket => {
     const releaseOnDataMutex = await onDataMutex.acquire()
     if (data.userName != null && data.key != null) {
       // login
-      // if (loginList.get(data.userName) == data.key) {
-      if (true) {
+      if (loginList.get(data.userName) == data.key) {
         userName = data.userName
-        loginSuccess = true
-        logger.info(`${userName} logged in (${socket.remoteAddress})`)
-        const releaseActiveUsersMutex = await activeUsersMutex.acquire()
-        activeUsers.set(data.userName, { socket })
-        releaseActiveUsersMutex()
+        if (data.version == 0) {
+          loginSuccess = true
+          logger.info(`${userName} logged in (${socket.remoteAddress})`)
+          const releaseActiveUsersMutex = await activeUsersMutex.acquire()
+          activeUsers.set(data.userName, { socket })
+          releaseActiveUsersMutex()
+        } else {
+          logger.info(`${userName} (${socket.remoteAddress}) is using older client`)
+          socket.end(encode({ reason: "You are using older client" }))
+        }
       } else {
         socket.end(encode({ reason: "Invalid login info" }))
       }
@@ -116,6 +127,46 @@ wss.on("connection", (ws, req) => {
   logger.info(`WebSocket to ${req.connection.remoteAddress} connected`)
 })
 
+const activeAdmins: Set<net.Socket> = new Set()
+const activeAdminsMutex = new Mutex()
+
+net.createServer(async socket => {
+  logger.info(`Admin socket (${socket.remoteAddress}) connected`)
+  const releaseActiveAdminsMutex = await activeAdminsMutex.acquire()
+  activeAdmins.add(socket)
+  releaseActiveAdminsMutex()
+
+  const onData = async (data) => {
+  }
+
+  socket.on("data", (data) => {
+    try {
+      onData(decode(data))
+    } catch {
+      logger.error(`Received invalid data from admin socket (${socket.remoteAddress}): ` + data)
+      socket.end(encode({ reason: "Invalid data." }))
+    }
+  })
+
+  socket.setTimeout(10000)
+  socket.on("timeout", () => {
+    logger.error(`Admin socket (${socket.remoteAddress}) timeout`)
+    socket.end(encode({ reason: "Socket timeout." }))
+  })
+  socket.on("error", async err => {
+    logger.error(`Admin socket (${socket.remoteAddress}) emit an error: ` + err)
+    const releaseActiveAdminsMutex = await activeAdminsMutex.acquire()
+    activeAdmins.delete(socket)
+    releaseActiveAdminsMutex()
+  })
+  socket.on("close", async hadError => {
+    logger.error(`Admin socket (${socket.remoteAddress}) closed`)
+    const releaseActiveAdminsMutex = await activeAdminsMutex.acquire()
+    activeAdmins.delete(socket)
+    releaseActiveAdminsMutex()
+  })
+}).listen(5043, "localhost")
+
 setInterval(async () => {
   const releaseQueueMutex = await queueMutex.acquire()
 
@@ -132,6 +183,3 @@ setInterval(async () => {
   queue = []
   releaseQueueMutex()
 }, 200)
-
-const encode = (obj: object) => Buffer.from(JSON.stringify(obj))
-const decode = (buffer: Buffer) => JSON.parse(buffer.toString())

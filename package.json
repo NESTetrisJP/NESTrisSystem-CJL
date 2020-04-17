@@ -5,10 +5,10 @@
   "main": "index.js",
   "scripts": {
     "watch:server": "parcel watch --target node --out-dir dist-server ./src/server/testClient.ts ./src/server/server.ts",
-    "watch:nodecg:dashboard": "parcel watch --out-dir dist-nodecg/ctwc-japan-lite/dashboard ./src/nodecg/dashboard/panel.html",
-    "watch:nodecg:extension": "parcel watch --target node --out-dir dist-nodecg/ctwc-japan-lite/extension ./src/nodecg/extension/index.js",
-    "watch:nodecg:graphics": "parcel watch --out-dir dist-nodecg/ctwc-japan-lite/graphics ./src/nodecg/graphics/index.html",
-    "watch:nodecg:all": "npm-run-all -p watch:nodecg:dashboard watch:nodecg:extension watch:nodecg:graphics",
+    "watch:nodecg:dashboard": "parcel watch --public-url ./ --out-dir dist-nodecg/ctwc-japan-lite/dashboard ./src/nodecg/dashboard/*.html",
+    "watch:nodecg:graphics": "parcel watch --public-url ./ --out-dir dist-nodecg/ctwc-japan-lite/graphics ./src/nodecg/graphics/*.html",
+    "watch:nodecg:extension": "parcel watch --target node --out-dir dist-nodecg/ctwc-japan-lite/extension ./src/nodecg/extension/index.ts",
+    "watch:nodecg:all": "npm-run-all -p watch:nodecg:dashboard watch:nodecg:graphics watch:nodecg:extension",
     "dev:client": "parcel --out-dir dist-client src/client/index.html",
     "dev:all": "npm-run-all -p watch:server watch:nodecg:all dev:client",
     "run:server": "node dist-server/server.js",
@@ -27,6 +27,7 @@
     "ts-token-generator": "^1.0.4"
   },
   "devDependencies": {
+    "ts-nodecg": "^0.3.1",
     "typescript": "^3.8.3"
   }
 }

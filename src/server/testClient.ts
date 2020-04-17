@@ -1,13 +1,21 @@
 import net from "net"
+import { encode, decode } from "../common/network-codec"
 
 console.log("NESTrisSystem Test Client v0.1.0")
 let startTime
 const client = net.createConnection({ port: 5041 }, () => {
-  client.write(encode({ userName: `テストTest${Date.now() % 1000}`, key: "key" }))
+  client.on("end", () => {
+    console.error("end")
+  })
+  client.on("data", () => {})
+
+  client.write(encode({ userName: `テストTest${Date.now() % 1000}`, key: "key", version: 0 }))
 
   startTime = Date.now()
   setInterval(() => {
-    client.write(encode({ timeSent: Date.now(), data: createDummyData() }))
+    if (!client.destroyed) {
+      client.write(encode({ timeSent: Date.now(), data: createDummyData() }))
+    }
   }, 200)
 })
 
@@ -30,6 +38,3 @@ const createDummyData = () => {
 
   return result
 }
-
-const encode = (obj: object) => Buffer.from(JSON.stringify(obj))
-const decode = (buffer: Buffer) => JSON.parse(buffer.toString())
