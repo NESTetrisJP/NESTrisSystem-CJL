@@ -1,9 +1,12 @@
 import net from "net"
 import ws from "ws"
 import fs from "fs"
+import readline from "readline"
 // import { TokenGenerator } from "ts-token-generator"
 import { Mutex } from "await-semaphore"
-import { encode, decode } from "../common/network-codec"
+import { encode, decode, decodeStr } from "../common/network-codec"
+
+const debug = true
 
 import SimpleNodeLogger from "simple-node-logger"
 const logger = SimpleNodeLogger.createSimpleLogger("server.log")
@@ -54,8 +57,7 @@ net.createServer(socket => {
   const onData = async (data) => {
     const releaseOnDataMutex = await onDataMutex.acquire()
     if (data.userName != null && data.key != null) {
-      // login
-      if (loginList.get(data.userName) == data.key) {
+      if (debug || loginList.get(data.userName) == data.key) {
         userName = data.userName
         if (data.version == 0) {
           loginSuccess = true
@@ -68,6 +70,7 @@ net.createServer(socket => {
           socket.end(encode({ reason: "You are using older client" }))
         }
       } else {
+        logger.info(`${data.userName} (${socket.remoteAddress}) tried to login, but key did not matched`)
         socket.end(encode({ reason: "Invalid login info" }))
       }
     } else if (loginSuccess) {
@@ -94,9 +97,12 @@ net.createServer(socket => {
   }
 
   logger.info(`Connection established with ${socket.remoteAddress}`)
-  socket.on("data", data => {
+  const rl = readline.createInterface(socket)
+
+  // socket.on("data", data => {
+  rl.on("line", data => {
     try {
-      onData(decode(data))
+      onData(decodeStr(data))
     } catch {
       logger.error(`Received invalid data from ${userName} (${socket.remoteAddress}): ` + data)
       socket.end(encode({ reason: "Invalid data." }))
