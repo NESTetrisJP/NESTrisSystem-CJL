@@ -1,5 +1,6 @@
 import net from "net"
-import { encode, decode } from "../../common/network-codec"
+import readline from "readline"
+import { encode, decodeStr } from "../../common/network-codec"
 
 export = function (nodecg: NodeCG) {
 	const serverActive = nodecg.Replicant("serverActive", { defaultValue: false })
@@ -8,6 +9,19 @@ export = function (nodecg: NodeCG) {
 		const socket = net.createConnection({ port: 5043 }, () => {
 			nodecg.log.info("Connected to NESTrisServer.")
 			serverActive.value = true
+			const rl = readline.createInterface(socket)
+
+			const onData = data => {
+
+			}
+
+			rl.on("line", data => {
+				try {
+					onData(decodeStr(data))
+				} catch {
+					nodecg.log.error("NESTrisServer responded invalid data: " + data)
+				}
+			})
 
 			/*
 			socket.setTimeout(10000)

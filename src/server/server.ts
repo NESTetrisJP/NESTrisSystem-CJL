@@ -4,7 +4,7 @@ import fs from "fs"
 import readline from "readline"
 // import { TokenGenerator } from "ts-token-generator"
 import { Mutex } from "await-semaphore"
-import { encode, decode, decodeStr } from "../common/network-codec"
+import { encode, decodeStr } from "../common/network-codec"
 
 const debug = true
 
@@ -54,12 +54,13 @@ net.createServer(socket => {
   let bucketReceived = 0
   let averageDelay = 0
   const onDataMutex = new Mutex()
+  const rl = readline.createInterface(socket)
   const onData = async (data) => {
     const releaseOnDataMutex = await onDataMutex.acquire()
     if (data.userName != null && data.key != null) {
       if (debug || loginList.get(data.userName) == data.key) {
         userName = data.userName
-        if (data.version == 0) {
+        if (data.version == 1) {
           loginSuccess = true
           logger.info(`${userName} logged in (${socket.remoteAddress})`)
           const releaseActiveUsersMutex = await activeUsersMutex.acquire()
@@ -97,7 +98,6 @@ net.createServer(socket => {
   }
 
   logger.info(`Connection established with ${socket.remoteAddress}`)
-  const rl = readline.createInterface(socket)
 
   // socket.on("data", data => {
   rl.on("line", data => {
@@ -142,12 +142,14 @@ net.createServer(async socket => {
   activeAdmins.add(socket)
   releaseActiveAdminsMutex()
 
+  const rl = readline.createInterface(socket)
   const onData = async (data) => {
   }
 
-  socket.on("data", (data) => {
+  // socket.on("data", (data) => {
+  rl.on("line", data => {
     try {
-      onData(decode(data))
+      onData(decodeStr(data))
     } catch {
       logger.error(`Received invalid data from admin socket (${socket.remoteAddress}): ` + data)
       socket.end(encode({ reason: "Invalid data." }))
