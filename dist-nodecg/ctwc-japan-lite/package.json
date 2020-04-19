@@ -22,18 +22,25 @@
     "compatibleRange": "^1.1.1",
     "dashboardPanels": [
       {
-        "name": "panel",
-        "title": "Panel",
+        "name": "general",
+        "title": "General",
         "width": 2,
-        "file": "panel.html",
+        "file": "general.html",
+        "headerColor": "#525F78"
+      },
+      {
+        "name": "server",
+        "title": "Server",
+        "width": 2,
+        "file": "server.html",
         "headerColor": "#525F78"
       }
     ],
     "graphics": [
       {
         "file": "index.html",
-        "width": 1280,
-        "height": 720
+        "width": 1920,
+        "height": 1080
       }
     ]
   },

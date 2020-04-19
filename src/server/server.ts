@@ -2,17 +2,20 @@ import net from "net"
 import ws from "ws"
 import fs from "fs"
 import readline from "readline"
-// import { TokenGenerator } from "ts-token-generator"
+import commandLineArgs from "command-line-args"
 import { Mutex } from "await-semaphore"
 import { encode, decodeStr } from "../common/network-codec"
-
-const debug = true
-
 import SimpleNodeLogger from "simple-node-logger"
+
 const logger = SimpleNodeLogger.createSimpleLogger("server.log")
 
-logger.info("NESTrisSystem Server v0.1.0")
-// const tokenGenerator = new TokenGenerator()
+const options = commandLineArgs([
+  { name: "debug", type: Boolean }
+])
+const debug = options.debug ?? false
+
+logger.info("NESTrisSystem Server v0.8.0")
+if (debug) logger.info("Launching in debug mode.")
 
 const loginList = new Map<string, string>()
 const loginListFile = JSON.parse(fs.readFileSync("loginlist.json", "utf8"))
@@ -22,6 +25,9 @@ loginListFile.forEach(e => {
 
 const activeUsers = new Map<string, { socket: net.Socket }>()
 const activeUsersMutex = new Mutex()
+const bestScores = new Map<string, number>()
+const hearts = new Map<string, [number, number]>()
+const heartsMutex = new Mutex()
 
 let queue = []
 const queueMutex = new Mutex()
@@ -66,6 +72,9 @@ net.createServer(socket => {
           const releaseActiveUsersMutex = await activeUsersMutex.acquire()
           activeUsers.set(data.userName, { socket })
           releaseActiveUsersMutex()
+          const releaseHeartsMutex = await heartsMutex.acquire()
+          hearts.set(data.userName, [0, 0])
+          releaseHeartsMutex()
         } else {
           logger.info(`${userName} (${socket.remoteAddress}) is using older client`)
           socket.end(encode({ reason: "You are using older client" }))
@@ -82,7 +91,12 @@ net.createServer(socket => {
         const thisDelay = serverTime - clientTime
         averageDelay = averageDelay / (bucketReceived + 1) * bucketReceived + thisDelay / (bucketReceived + 1)
         bucketReceived = Math.min(bucketReceived + 1, 100)
-        const newData = data.data.map(e => ({ ...e, userName, time: e.time + averageDelay }))
+        let bestScore = bestScores.get(userName) ?? 0
+        const newData = data.data.map(e => {
+          if (e.score != null) bestScore = Math.max(bestScore, e.score)
+          return { ...e, userName, time: e.time + averageDelay, bestScore }
+        })
+        bestScores.set(userName, bestScore)
         queue = merge(queue, newData)
         // console.log(queue)
         releaseQueueMutex()
@@ -131,6 +145,12 @@ const wss = new ws.Server({ port: 5042 })
 
 wss.on("connection", (ws, req) => {
   logger.info(`WebSocket to ${req.connection.remoteAddress} connected`)
+  ws.on("error", () => {
+
+  })
+  ws.on("close", () => {
+
+  })
 })
 
 const activeAdmins: Set<net.Socket> = new Set()
@@ -144,6 +164,11 @@ net.createServer(async socket => {
 
   const rl = readline.createInterface(socket)
   const onData = async (data) => {
+    if (false) {
+      const releaseHeartsMutex = await heartsMutex.acquire()
+      hearts.set(data.userName, [0, 3])
+      releaseHeartsMutex()
+    }
   }
 
   // socket.on("data", (data) => {
@@ -180,7 +205,12 @@ setInterval(async () => {
 
   const buffer = encode({
     timeSent: Date.now(),
-    users: Array.from(activeUsers.keys()),
+    users: Array.from(activeUsers.keys()).map(name => ({ name, hearts: hearts.get(name) })),
+    rooms: {
+      "qualifier": Array.from(activeUsers.keys()),
+      "1v1a": Array.from(activeUsers.keys()).slice(0, 2),
+      "1v1b": Array.from(activeUsers.keys()).slice(2, 4)
+    },
     data: queue
   })
   wss.clients.forEach(client => {

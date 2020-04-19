@@ -1,5 +1,69 @@
-#main {
-  width: 1280px;
-  height: 720px;
+body {
+  background-color: #000;
+  margin: 0;
+}
+
+canvas {
   image-rendering: pixelated;
+}
+
+#rooms {
+  background-color: #333;
+  color: #FFF;
+  width: 100%;
+}
+
+.room-name {
+  background-color: #333;
+  padding: 10px 10px;
+  height: 24px;
+  line-height: 24px;
+  cursor: pointer;
+  display: inline-block;
+}
+
+.room-name:hover {
+  background-color: #BBB;
+}
+
+.room-name-active {
+  background-color: #888;
+}
+
+.game-container {
+  position: fixed;
+  top: 44px;
+  width: 100%;
+  height: calc(100% - 44px);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: left;
+  align-items: top;
+  box-sizing: border-box;
+}
+
+.game-container-qualifier {
+  width: calc(100% - 208px);
+}
+
+.game {
+  width: 192px;
+  height: 464px;
+  margin: 16px 16px;
+  flex: 0 0 192px;
+}
+
+.game-1v1 {
+  width: 512px;
+  height: 448px;
+  margin: 16px 16px;
+  flex: 0 0 512px;
+}
+
+.ranking {
+  position: fixed;
+  top: 44px;
+  right: 0px;
+  width: 208px;
+  height: 508px;
 }

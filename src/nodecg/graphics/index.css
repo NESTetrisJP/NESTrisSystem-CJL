@@ -1,0 +1,124 @@
+body {
+  margin: 0;
+  font-family: "Yu Gothic";
+  font-weight: bold;
+  color: #FDDA76;
+}
+
+canvas {
+  image-rendering: pixelated;
+}
+
+#title {
+  width: 1920px;
+  height: 1080px;
+  position: fixed;
+  background-image: url(images/title.png);
+}
+
+.title-message {
+  position: fixed;
+  top: 900px;
+  width: 1920px;
+  font-size: 72px;
+  text-align: center;
+}
+
+#game-qualifier, #game-1v1, #game-1v1v1, #game-1v1v1v1, #game-1v1-1v1, #game-award {
+  width: 1920px;
+  height: 1080px;
+  position: fixed;
+  background-image: url(images/screen.png);
+}
+
+.game-container {
+  position: fixed;
+  width: 1920px;
+  height: 1016px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.game-container-qualifier {
+  width: 1504px;
+}
+
+.game-large {
+  width: 384px;
+  height: 928px;
+  margin: 0px 32px;
+  flex: 0 0 384px;
+}
+
+.game-medium {
+  width: 288px;
+  height: 696px;
+  margin: 0px 24px;
+  flex: 0 0 288px;
+}
+
+.game-small {
+  width: 192px;
+  height: 464px;
+  margin: 0px 16px;
+  flex: 0 0 192px;
+}
+
+.game-1v1-large {
+  width: 1024px;
+  height: 896px;
+  margin: 0px 0px;
+  flex: 0 0 1024px;
+}
+
+.game-1v1-medium {
+  width: 768px;
+  height: 672px;
+  margin: 0px 48px;
+  flex: 0 0 768px;
+}
+
+.ranking {
+  position: fixed;
+  top: 0px;
+  left: 1504px;
+  width: 416px;
+  height: 1016px;
+}
+
+.award {
+  position: fixed;
+  top: 32px;
+  left: 576px;
+  width: 768px;
+  height: 960px;
+}
+
+.game-footer {
+  position: fixed;
+  top: 1025px;
+  font-size: 32px;
+  width: 1920px;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.game-footer-variable {
+  margin-left: 50px;
+  color: white;
+}
+
+#transition {
+  width: 270px;
+  height: 1080px;
+  position: fixed;
+  background-image: url(images/transition-piece.png);
+}
+
+#debug {
+  top: 100px;
+  position: fixed;
+}
