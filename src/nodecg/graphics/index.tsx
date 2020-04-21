@@ -1,7 +1,13 @@
 import { h, app } from "hyperapp"
-import r from "../../common/renderer"
 import { Mutex } from "await-semaphore"
 import ReplicantManager from "../../common/replicant-manager"
+import Renderer from "../../common/renderer"
+import deepEqual from "fast-deep-equal"
+import DataProcessor from "../../common/data-processor"
+import { CanvasReferences } from "../../common/canvas-references"
+import GameRenderer from "../../common/game-renderer"
+
+const r = Renderer.getInstance()
 
 const replicantManager = new ReplicantManager({
   messages: {
@@ -32,42 +38,66 @@ const updateTransition = (state, phase) => {
   }
 }
 
-let canvasContexts = {
-  singlePlayers: new Array<CanvasRenderingContext2D[]>(),
-  doublePlayers: new Array<CanvasRenderingContext2D[]>(),
-  ranking: new Array<CanvasRenderingContext2D>(),
-  award: new Array<CanvasRenderingContext2D>()
-}
-
 const reloadIcons = (state) => {
   r.userIcons.clear()
   return state
 }
 
+let canvasContexts: CanvasReferences = {
+  "qualifier": [],
+  "qualifier-ranking": [],
+  "1v1a": [],
+  "1v1b": [],
+  "award": []
+}
+
 const updateCanvasContexts = (state) => {
   const result = {
-    singlePlayers: [],
-    doublePlayers: [],
-    ranking: [],
-    award: []
+    "qualifier": [],
+    "qualifier-ranking": [],
+    "1v1a": [],
+    "1v1b": [],
+    "award": []
   }
 
   ;[state.currentView, state.transitionTo].forEach(view => {
     switch (view) {
-      case "game-qualifier":
-        const sp = Array.from(document.querySelectorAll(`#${view}>.game-container>canvas`)).map(e => (e as HTMLCanvasElement).getContext("2d"))
-        result.singlePlayers.push(sp)
-        const ranking = (document.querySelector(`#${view}>.ranking`) as HTMLCanvasElement).getContext("2d")
-        result.ranking.push(ranking)
-        break
-      case "game-1v1":
-      case "game-1v1-1v1":
-        const dp = Array.from(document.querySelectorAll(`#${view}>.game-container>canvas`)).map(e => (e as HTMLCanvasElement).getContext("2d"))
-        result.doublePlayers.push(dp)
-        break
-      case "game-award":
-        const award = (document.querySelector(`#${view}>.award`) as HTMLCanvasElement).getContext("2d")
-        result.award.push(award)
+      case "game-qualifier": {
+        const elements = Array.from(document.querySelectorAll<HTMLCanvasElement>(`#${view}>.game-container>canvas`))
+        result["qualifier"].push(elements.map(e => ({ context: e.getContext("2d"), position: null })))
+        const rankingElement = document.querySelector<HTMLCanvasElement>(`#${view}>.ranking`)
+        if (rankingElement != null) result["qualifier-ranking"].push(({ context: rankingElement.getContext("2d"), position: null }))
+      }
+      break
+      case "game-1v1": {
+        const elements = Array.from(document.querySelectorAll<HTMLCanvasElement>(`#${view}>.game-container>canvas`))
+        if (elements.length >= 1) {
+          result["1v1a"].push([
+            { context: elements[0].getContext("2d"), position: 0 },
+            { context: elements[0].getContext("2d"), position: 1 }
+          ])
+        }
+      }
+      break
+      case "game-1v1-1v1": {
+        const elements = Array.from(document.querySelectorAll<HTMLCanvasElement>(`#${view}>.game-container>canvas`))
+        if (elements.length >= 2) {
+          result["1v1a"].push([
+            { context: elements[0].getContext("2d"), position: 0 },
+            { context: elements[0].getContext("2d"), position: 1 }
+          ])
+          result["1v1b"].push([
+            { context: elements[1].getContext("2d"), position: 0 },
+            { context: elements[1].getContext("2d"), position: 1 }
+          ])
+        }
+      }
+      break
+      case "game-award": {
+        const element = document.querySelector<HTMLCanvasElement>(`#${view}>.award`)
+        result["award"].push({ context: element.getContext("2d"), position: null })
+      }
+      break
     }
   })
 
@@ -77,6 +107,30 @@ const updateCanvasContexts = (state) => {
 
 const updateCanvasContextsEffect = dispatch => {
   setTimeout(() => dispatch(updateCanvasContexts), 100)
+}
+
+let onServerMessageCallback: Function = null
+
+const onServerMessage = (state, data) => {
+  const roomPlayers = {
+    "all": data.users.length
+  }
+  Object.keys(data.rooms).forEach(room => {
+    roomPlayers[room] = data.rooms[room].length
+  })
+
+  if (deepEqual(roomPlayers, state.roomPlayers)) {
+    return state
+  }
+  return [{
+    ...state,
+    roomPlayers
+  }, [updateCanvasContextsEffect]]
+}
+
+const onServerMessageEffect = (dispatch) => {
+  onServerMessageCallback = (data) => dispatch(onServerMessage, data)
+  return () => onServerMessageCallback = null
 }
 
 const transitionEffect = dispatch => {
@@ -98,13 +152,6 @@ const startTransition = (state, to) => {
     transitionTo: to,
     transitionPhase: 0
   }, [transitionEffect]]
-}
-
-const updateNumPlayers = (state, d) => {
-  return [{
-    ...state,
-    numPlayers: state.numPlayers + d
-  }, [updateCanvasContextsEffect]]
 }
 
 const calculateClip = (state, viewName) => {
@@ -129,16 +176,17 @@ const constructGameElement = (state, type) => {
   const inner = () => {
     switch(type) {
     case "qualifier":
-      const shrink = state.numPlayers <= 5 ? 0
-                  : state.numPlayers <= 6 ? 400
-                  : state.numPlayers <= 8 ? 300
-                  : state.numPlayers <= 10 ? 150
+      const numPlayers = state.roomPlayers["qualifier"]
+      const shrink = numPlayers <= 5 ? 0
+                  : numPlayers <= 6 ? 400
+                  : numPlayers <= 8 ? 300
+                  : numPlayers <= 10 ? 150
                   : 0
       return [
         <div class="game-container game-container-qualifier" style={{ padding: `0 ${shrink}px` }}>
-          {[...Array(state.numPlayers)].map((e, i) => {
-            const className = state.numPlayers <= 3 ? "game-large" :
-                              state.numPlayers <= 4 ? "game-medium": "game-small"
+          {[...Array(numPlayers)].map((e, i) => {
+            const className = numPlayers <= 3 ? "game-large" :
+                              numPlayers <= 4 ? "game-medium": "game-small"
             return <canvas class={className} width="96" height="232"></canvas>
           })}
         </div>,
@@ -171,8 +219,7 @@ const constructGameElement = (state, type) => {
   </div>
 }
 
-r.init()
-let currentState = {}
+let currentState: any = {}
 
 Promise.all([
   replicantManager.initialize(),
@@ -185,7 +232,7 @@ Promise.all([
         transitionTo: "game",
         transitionPhase: -1,
         footer: "予選スコアアタック",
-        numPlayers: 1
+        roomPlayers: {}
       }
     ],
     view: state => (
@@ -209,86 +256,60 @@ Promise.all([
             {/*<button onClick={[startTransition, "game-1v1v1v1"]}>4</button>*/}
             <button onClick={[startTransition, "game-1v1-1v1"]}>22</button>
             <button onClick={[startTransition, "game-award"]}>award</button>
-            <button onClick={[updateNumPlayers, -1]}>-</button>
-            <button onClick={[updateNumPlayers, 1]}>+</button>
           </div>
         }
-          { /* Expose current state */ () => { currentState = state; return null } }
-        </div>
+        { /* Expose current state */ (() => { currentState = state; return null })() }
+      </div>
     ),
     subscriptions: state => [
       ...replicantManager.getSubscriptions(),
+      [onServerMessageEffect, {}]
     ],
     node: document.querySelector("#root")
   })
 })
 
-r.loadImages().then(() => {
+const dataProcessor = new DataProcessor()
+
+const newConnection = () => {
+  let sock = new WebSocket(`${location.protocol == "https:" ? "wss" : "ws"}://${location.hostname}:5042`)
+
+  sock.addEventListener("open", e => {
+    console.log("WebSocket opened")
+  })
+
+  sock.addEventListener("message", async (e) => {
+    const data = JSON.parse(await e.data.text())
+    await dataProcessor.onData(data)
+    if (onServerMessageCallback != null) onServerMessageCallback(data)
+  })
+
+  sock.addEventListener("close", e => {
+    console.log("WebSocket closed")
+    setTimeout(() => {
+      webSocket = newConnection()
+    }, 3000)
+  })
+
+  sock.addEventListener("error", e => {
+    console.error(e)
+  })
+
+  return sock
+}
+
+let webSocket = newConnection()
+
+r.initialize().then(() => {
   const onFrame = () => {
-    canvasContexts.singlePlayers.forEach(set => {
-      set.forEach(ctx => {
-        ctx.clearRect(0, 0, 96, 232)
-        ctx.drawImage(r.fieldTiny, 0, 0)
-        r.drawText(ctx, "Player1あいう", 8, 216)
-        const rankString = (1).toString().padStart(2, "0")
-        const scoreString = (0).toString().padStart(6, "0")
-        const levelString = (0).toString().padStart(2, "0")
-        const linesString = (0).toString().padStart(3, "0")
-        r.drawText(ctx, `#${rankString}:${scoreString}`, 8, 8)
-        r.drawText(ctx, `${scoreString}-${linesString}`, 8, 16)
-        const icon = r.requestUserIcon("コーリャン")
-        if (icon != null) {
-          ctx.drawImage(icon, 8, 56, 79, 79)
-          ctx.fillStyle = "rgba(0, 0, 0, 0.8)"
-          ctx.fillRect(7, 55, 81, 81)
-        }
-      })
-    })
-    canvasContexts.doublePlayers.forEach(set => {
-      set.forEach(ctx => {
-        ctx.clearRect(0, 0, 256, 224)
-        ctx.drawImage(r.field2P, 0, 0)
-        r.drawText(ctx, "000000  ", 96, 40)
-        r.drawText(ctx, "<000000>", 96, 48)
-        r.drawText(ctx, "  000000", 96, 56)
-        ctx.globalCompositeOperation = "multiply"
-        ctx.fillStyle = "rgb(53, 202, 53)"
-        ctx.fillStyle = "rgb(250, 245, 0)"
-        ctx.fillRect(96, 48, 64, 8)
-        ctx.globalCompositeOperation = "source-over"
-        r.drawText(ctx, "000", 96, 88)
-        r.drawText(ctx, "000", 136, 88)
-        r.drawText(ctx, "00", 96, 120)
-        r.drawText(ctx, "00", 144, 120)
-        r.drawTextCentered(ctx, "Player1あいう", 48, 208)
-        r.drawTextCentered(ctx, "Player2えお", 208, 208)
-        ctx.drawImage(r.heart, 8, 0, 8, 8, 96, 208, 8, 8)
-        ctx.drawImage(r.heart, 8, 0, 8, 8, 104, 208, 8, 8)
-        ctx.drawImage(r.heart, 0, 0, 8, 8, 112, 208, 8, 8)
-        ctx.drawImage(r.heart, 0, 0, 8, 8, 136, 208, 8, 8)
-        ctx.drawImage(r.heart, 8, 0, 8, 8, 144, 208, 8, 8)
-        ctx.drawImage(r.heart, 8, 0, 8, 8, 152, 208, 8, 8)
-      })
-    })
-    canvasContexts.ranking.forEach(ctx => {
-      ctx.clearRect(0, 0, 104, 254)
-      ctx.drawImage(r.rankingFrame, 0, 0)
-      r.drawText(ctx, "RANKING", 24, 8)
-      ;[...Array(7)].forEach((_, i) => {
-        r.drawText(ctx, `${i + 1}.プレイヤー名`, 8, 32 + i * 24)
-        r.drawText(ctx, "999999", 48, 40 + i * 24)
-      })
-    })
-    canvasContexts.award.forEach(ctx => {
-      ctx.clearRect(0, 0, 128, 160)
-      ctx.drawImage(r.award, 0, 0)
-      const icon = r.requestUserIcon("コーリャン")
-      if (icon != null) {
-        ctx.drawImage(icon, 24, 48, 79, 79)
-        ctx.fillStyle = "rgba(0, 0, 0, 0.8)"
-      }
-      r.drawTextCentered(ctx, "コーリャン", 64, 144)
-    })
+    dataProcessor.onRender()
+    const qualifierRanking = dataProcessor.getRankingOfRoom("qualifier")
+
+    GameRenderer.renderRoom(canvasContexts["qualifier"], dataProcessor, "qualifier", 0, qualifierRanking.userToRankIndex)
+    GameRenderer.renderRoom(canvasContexts["1v1a"], dataProcessor, "1v1a", 1)
+    GameRenderer.renderRoom(canvasContexts["1v1b"], dataProcessor, "1v1b", 1)
+    GameRenderer.renderQualifierRanking(canvasContexts["qualifier-ranking"], qualifierRanking.ranking)
+    GameRenderer.renderAward(canvasContexts["award"], currentState.nodecg?.awardedPlayer)
   }
 
   const _onFrame = () => {

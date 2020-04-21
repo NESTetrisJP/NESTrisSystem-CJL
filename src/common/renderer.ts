@@ -35,17 +35,19 @@ class UserIconLoader {
 }
 
 export default class Renderer {
-  static asciiFont: HTMLImageElement
-  static misakiFont: HTMLImageElement
-  static blocks: HTMLImageElement
-  static blocks6: HTMLImageElement
-  static fieldTiny: HTMLImageElement
-  static field2P: HTMLImageElement
-  static rankingFrame: HTMLImageElement
-  static heart: HTMLImageElement
-  static award: HTMLImageElement
+  loaded = false
 
-  static fontMap = new Map<number, [number, number]>()
+  asciiFont: HTMLImageElement
+  misakiFont: HTMLImageElement
+  blocks: HTMLImageElement
+  blocks6: HTMLImageElement
+  fieldTiny: HTMLImageElement
+  field2P: HTMLImageElement
+  rankingFrame: HTMLImageElement
+  heart: HTMLImageElement
+  award: HTMLImageElement
+
+  fontMap = new Map<number, [number, number]>()
 
   static nextPieceRenderingData = {
     "I": [
@@ -92,7 +94,14 @@ export default class Renderer {
     ]
   }
 
-  static userIcons = new Map<string, UserIconLoader>()
+  userIcons = new Map<string, UserIconLoader>()
+
+  static instance: Renderer = null
+
+  static getInstance() {
+    if (Renderer.instance == null) Renderer.instance = new Renderer()
+    return Renderer.instance
+  }
 
   static loadImage(path: string) {
     return new Promise<HTMLImageElement>((resolve, reject) => {
@@ -102,8 +111,10 @@ export default class Renderer {
       img.src = path
     })
   }
-  static async loadImages() {
-    unicodeToKuten.forEach(e => Renderer.fontMap.set(e[0], [e[1] - 1, e[2] - 1]))
+
+  async initialize() {
+    if (this.loaded) return
+    unicodeToKuten.forEach(e => this.fontMap.set(e[0], [e[1] - 1, e[2] - 1]))
 
     const result = await Promise.all([
       Renderer.loadImage(asciiFont),
@@ -116,57 +127,57 @@ export default class Renderer {
       Renderer.loadImage(heart),
       Renderer.loadImage(award),
     ])
-    Renderer.asciiFont = result[0]
-    Renderer.misakiFont = result[1]
-    Renderer.blocks = result[2]
-    Renderer.blocks6 = result[3]
-    Renderer.fieldTiny = result[4]
-    Renderer.field2P = result[5]
-    Renderer.rankingFrame = result[6]
-    Renderer.heart = result[7]
-    Renderer.award = result[8]
+    this.asciiFont = result[0]
+    this.misakiFont = result[1]
+    this.blocks = result[2]
+    this.blocks6 = result[3]
+    this.fieldTiny = result[4]
+    this.field2P = result[5]
+    this.rankingFrame = result[6]
+    this.heart = result[7]
+    this.award = result[8]
   }
 
+  /*
   static init() {
     setInterval(() => {
-      /*
       Renderer.userIcons.forEach((value, key) => {
         if (value.timeout && !value.notFound && value.getImage() == null) Renderer.userIcons.delete(key)
       })
-      */
     }, 1000)
   }
+  */
 
-  static drawText(ctx, str, dx, dy) {
+  drawText(ctx, str, dx, dy) {
     let x = 0
     for (let i = 0; i < str.length; i++) {
       const code = str.charCodeAt(i)
       if (0x20 <= code && code < 0x80) {
-          ctx.drawImage(Renderer.asciiFont, ((code - 0x20) % 16) * 8, Math.floor((code - 0x20) / 16) * 8, 8, 8, dx + x, dy, 8, 8)
+          ctx.drawImage(this.asciiFont, ((code - 0x20) % 16) * 8, Math.floor((code - 0x20) / 16) * 8, 8, 8, dx + x, dy, 8, 8)
           x += 8
       } else {
-        const kuten = Renderer.fontMap.get(str.charCodeAt(i))
+        const kuten = this.fontMap.get(str.charCodeAt(i))
         if (kuten != null) {
-          ctx.drawImage(Renderer.misakiFont, kuten[1] * 8, kuten[0] * 8, 8, 8, dx + x, dy, 8, 8)
+          ctx.drawImage(this.misakiFont, kuten[1] * 8, kuten[0] * 8, 8, 8, dx + x, dy, 8, 8)
           x += 8
         }
       }
     }
   }
 
-  static drawTextCentered(ctx, str, dx, dy) {
-    Renderer.drawText(ctx, str, dx - str.length * 4, dy)
+  drawTextCentered(ctx, str, dx, dy) {
+    this.drawText(ctx, str, dx - str.length * 4, dy)
   }
 
-  static requestUserIcon(name: string) {
-    const iconLoader = Renderer.userIcons.get(name)
+  requestUserIcon(name: string) {
+    const iconLoader = this.userIcons.get(name)
     if (iconLoader != null) {
       const icon = iconLoader.getImage()
       return icon
     } else {
       const loader = new UserIconLoader(name)
       loader.load()
-      Renderer.userIcons.set(name, loader)
+      this.userIcons.set(name, loader)
       return null
     }
   }

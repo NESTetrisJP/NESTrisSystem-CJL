@@ -27,6 +27,12 @@ Promise.all([
           </div>
           <hr></hr>
           <div>
+            表彰プレイヤー名:
+            <input id="awardedPlayer" value={state.nodecg.awardedPlayer}></input>
+            <button id="updateAwardedPlayer" onclick={[updateFromInput, ["awardedPlayer", "awardedPlayer"]]}>更新</button>
+          </div>
+          <hr></hr>
+          <div>
             画面切り替え:
             <button onclick={[sendMessage, ["changeScene", "title"]]}>タイトル画面</button>
             <button onclick={[sendMessage, ["changeScene", "game-qualifier"]]}>予選画面</button>

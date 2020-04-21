@@ -18,7 +18,8 @@ export default class ReplicantManager {
     this.replicantNames = [
       "serverActive",
       "footer",
-      "titleMessage"
+      "titleMessage",
+      "awardedPlayer"
     ]
     this.replicants = {}
     this.replicantActions = {}

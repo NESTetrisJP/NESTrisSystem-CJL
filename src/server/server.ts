@@ -14,7 +14,7 @@ const options = commandLineArgs([
 ])
 const debug = options.debug ?? false
 
-logger.info("NESTrisSystem Server v0.8.0")
+logger.info("NESTrisSystem Server v0.8.1")
 if (debug) logger.info("Launching in debug mode.")
 
 const loginList = new Map<string, string>()
