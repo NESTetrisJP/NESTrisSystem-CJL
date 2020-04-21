@@ -22,7 +22,7 @@ class UserIconLoader {
     this.timeout = false
   }
   load() {
-    Renderer.loadImage(`http://localhost:1234/icons/${md5(this.name)}.png`).then(e => {
+    Renderer.loadImage(`${location.protocol}//${location.hostname}/icons/${md5(this.name)}.png`).then(e => {
       this.image = e
     }).catch(err => {
       console.error(err)

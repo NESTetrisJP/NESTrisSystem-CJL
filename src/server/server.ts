@@ -1,4 +1,5 @@
 import net from "net"
+import https from "https"
 import ws from "ws"
 import fs from "fs"
 import readline from "readline"
@@ -10,12 +11,15 @@ import SimpleNodeLogger from "simple-node-logger"
 const logger = SimpleNodeLogger.createSimpleLogger("server.log")
 
 const options = commandLineArgs([
-  { name: "debug", type: Boolean }
+  { name: "debug", type: Boolean },
+  { name: "ssl", type: Boolean }
 ])
 const debug = options.debug ?? false
+const ssl = options.ssl ?? false
 
-logger.info("NESTrisSystem Server v0.8.1")
+logger.info("NESTrisSystem Server v0.8.2")
 if (debug) logger.info("Launching in debug mode.")
+if (ssl) logger.info("Launching in SSL mode.")
 
 const loginList = new Map<string, string>()
 const loginListFile = JSON.parse(fs.readFileSync("loginlist.json", "utf8"))
@@ -141,15 +145,29 @@ net.createServer(socket => {
   })
 }).listen(5041)
 
-const wss = new ws.Server({ port: 5042 })
+let wss: ws.Server
+
+if (ssl) {
+  const httpsServer = https.createServer({
+    key: fs.readFileSync(process.env["SSL_KEY"]),
+    cert: fs.readFileSync(process.env["SSL_CERT"])
+  }, (req, res) => {
+    res.writeHead(200)
+    res.end()
+  }).listen(5042)
+
+  wss = new ws.Server({ server: httpsServer })
+} else {
+  wss = new ws.Server({ port: 5042 })
+}
 
 wss.on("connection", (ws, req) => {
   logger.info(`WebSocket to ${req.connection.remoteAddress} connected`)
-  ws.on("error", () => {
-
+  ws.on("error", (err) => {
+    logger.info(`WebSocket to ${req.connection.remoteAddress} emit an error: ` + err)
   })
   ws.on("close", () => {
-
+    logger.info(`WebSocket to ${req.connection.remoteAddress} closed`)
   })
 })
 

@@ -1,7 +1,7 @@
 import net from "net"
 import { encode, decode } from "../common/network-codec"
 
-console.log("NESTrisSystem Test Client v0.8.1")
+console.log("NESTrisSystem Test Client v0.8.2")
 for (let i = 0; i < 8; i++) {
   let score = 0
   let end = 0
