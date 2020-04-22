@@ -16,23 +16,32 @@ const selectRoom = (state, name) => {
 }
 
 let canvasContexts: CanvasReferences = {
+  "default": [],
   "qualifier": [],
   "qualifier-ranking": [],
   "1v1a": [],
   "1v1b": [],
+  "1v1v1": [],
   "award": []
 }
 
 const updateCanvasContexts = (state) => {
   const result = {
+    "default": [],
     "qualifier": [],
     "qualifier-ranking": [],
     "1v1a": [],
     "1v1b": [],
+    "1v1v1": [],
     "award": []
   }
 
   switch (state.selectedRoom) {
+    case "default": {
+      const elements = Array.from(document.querySelectorAll<HTMLCanvasElement>(`#room-default>.game-container>canvas`))
+      result["default"].push(elements.map(e => ({ context: e.getContext("2d"), position: null })))
+    }
+    break
     case "qualifier": {
       const elements = Array.from(document.querySelectorAll<HTMLCanvasElement>(`#room-qualifier>.game-container>canvas`))
       result["qualifier"].push(elements.map(e => ({ context: e.getContext("2d"), position: null })))
@@ -41,7 +50,7 @@ const updateCanvasContexts = (state) => {
     }
     break
     case "1v1a":
-    case "1v1b":
+    case "1v1b": {
       const element = document.querySelector<HTMLCanvasElement>(`#room-${state.selectedRoom}>.game-container>canvas`)
       if (element != null) {
         result[state.selectedRoom].push([
@@ -49,7 +58,13 @@ const updateCanvasContexts = (state) => {
           { context: element.getContext("2d"), position: 1 }
         ])
       }
-      break
+    }
+    break
+    case "1v1v1": {
+      const elements = Array.from(document.querySelectorAll<HTMLCanvasElement>(`#room-1v1v1>.game-container>canvas`))
+      result["1v1v1"].push(elements.map(e => ({ context: e.getContext("2d"), position: null })))
+    }
+    break
   }
 
   canvasContexts = result
@@ -59,9 +74,7 @@ const updateCanvasContexts = (state) => {
 let onServerMessageCallback: Function = null
 
 const onServerMessage = (state, data) => {
-  const roomPlayers = {
-    "all": data.users.length
-  }
+  const roomPlayers = {}
   Object.keys(data.rooms).forEach(room => {
     roomPlayers[room] = data.rooms[room].length
   })
@@ -89,8 +102,8 @@ const updateCanvasContextsEffect = dispatch => {
 }
 
 const constructRoomSelectorElements = (state) => {
-  const displayNames = ["予選", "1v1-A", "1v1-B"]
-  const internalNames = ["qualifier", "1v1a", "1v1b"]
+  const displayNames = ["ロビー", "予選", "1v1-A", "1v1-B", "1v1v1"]
+  const internalNames = ["default", "qualifier", "1v1a", "1v1b", "1v1v1"]
   return displayNames.map((name, i) => {
     const internalName = internalNames[i]
     const classes = [
@@ -104,7 +117,15 @@ const constructRoomSelectorElements = (state) => {
 const constructRoomElement = (state, name: string) => {
   let innerElements
   if (name == state.selectedRoom) {
-    if (name == "qualifier") {
+    if (name == "default") {
+      innerElements = [
+        <div class="game-container">
+          {[...Array(state.roomPlayers[name])].map((e, i) => {
+            return <canvas class="game" width="96" height="232"></canvas>
+          })}
+        </div>
+      ]
+    } else if (name == "qualifier") {
       innerElements = [
         <div class="game-container game-container-qualifier">
           {[...Array(state.roomPlayers[name])].map((e, i) => {
@@ -113,10 +134,18 @@ const constructRoomElement = (state, name: string) => {
         </div>,
         <canvas class="ranking" width="104" height="254"></canvas>
       ]
-    } else if (name.startsWith("1v1")) {
+    } else if (name == "1v1a" || name == "1v1b") {
       innerElements = [
-        <div class="game-container game-container-qualifier">
+        <div class="game-container">
           <canvas class="game-1v1" width="256" height="224"></canvas>
+        </div>,
+      ]
+    } else if (name == "1v1v1") {
+      innerElements = [
+        <div class="game-container">
+          {[...Array(state.roomPlayers[name])].map((e, i) => {
+            return <canvas class="game" width="96" height="232"></canvas>
+          })}
         </div>,
       ]
     }
@@ -127,7 +156,7 @@ const constructRoomElement = (state, name: string) => {
 app({
   init: [
     {
-      selectedRoom: "qualifier",
+      selectedRoom: "default",
       roomPlayers: {}
     }
   ],
@@ -136,9 +165,11 @@ app({
       <div id="rooms">
         { constructRoomSelectorElements(state) }
       </div>
+      { constructRoomElement(state, "default") }
       { constructRoomElement(state, "qualifier") }
       { constructRoomElement(state, "1v1a") }
       { constructRoomElement(state, "1v1b") }
+      { constructRoomElement(state, "1v1v1") }
       <canvas id="main" width="640" height="360"></canvas>
     </div>
   ),
@@ -180,14 +211,17 @@ const newConnection = () => {
 let webSocket = newConnection()
 
 r.initialize().then(() => {
-  updateCanvasContexts({ selectedRoom: "qualifier" })
+  updateCanvasContexts({ selectedRoom: "default" })
   const onFrame = () => {
     dataProcessor.onRender()
-    const qualifierRanking = dataProcessor.getRankingOfRoom("qualifier")
+    const qualifierRanking = dataProcessor.getRankingOfRoom("qualifier", true)
+    const _1v1v1Ranking = dataProcessor.getRankingOfRoom("1v1v1", false)
 
+    GameRenderer.renderRoom(canvasContexts["default"], dataProcessor, "default", 0)
     GameRenderer.renderRoom(canvasContexts["qualifier"], dataProcessor, "qualifier", 0, qualifierRanking.userToRankIndex)
     GameRenderer.renderRoom(canvasContexts["1v1a"], dataProcessor, "1v1a", 1)
     GameRenderer.renderRoom(canvasContexts["1v1b"], dataProcessor, "1v1b", 1)
+    GameRenderer.renderRoom(canvasContexts["1v1v1"], dataProcessor, "1v1v1", 0, _1v1v1Ranking.userToRankIndex, _1v1v1Ranking.ranking)
     GameRenderer.renderQualifierRanking(canvasContexts["qualifier-ranking"], qualifierRanking.ranking)
   }
 

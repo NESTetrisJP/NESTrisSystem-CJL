@@ -48,7 +48,6 @@ export default class DataProcessor {
     this.playerInfo.clear()
     data.users.forEach(({name, hearts}) => this.playerInfo.set(name, { hearts }))
     this.roomUsers = {
-      all: data.users.map(e => e.name),
       ...data.rooms
     }
     releaseMessageMutex()
@@ -75,13 +74,13 @@ export default class DataProcessor {
     return this.playerStates.get(playerName)
   }
 
-  getRankingOfRoom(roomName) {
+  getRankingOfRoom(roomName, topScore: boolean) {
     const ranking = []
     const userToRankIndex = new Map<string, number>()
     this.getRoomUsers(roomName).forEach(userName => {
       const d = this.getPlayerState(userName)
       if (d != null) {
-        ranking.push([userName, d.bestScore])
+        ranking.push([userName, topScore ? d.bestScore : d.score])
       }
     })
     ranking.sort((a, b) => b[1] - a[1])

@@ -38,6 +38,7 @@ Promise.all([
             <button onclick={[sendMessage, ["changeScene", "game-qualifier"]]}>予選画面</button>
             <button onclick={[sendMessage, ["changeScene", "game-1v1"]]}>1v1画面</button>
             <button onclick={[sendMessage, ["changeScene", "game-1v1-1v1"]]}>1v1画面x2</button>
+            <button onclick={[sendMessage, ["changeScene", "game-1v1v1"]]}>1v1v1画面</button>
             <button onclick={[sendMessage, ["changeScene", "game-award"]]}>表彰画面</button>
           </div>
           <hr></hr>

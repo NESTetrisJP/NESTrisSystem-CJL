@@ -1,6 +1,6 @@
 {
   "name": "nestrisclient-ctwcjapan",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "description": "Hyperapp Sample Project with TypeScript.",
   "main": "index.js",
   "scripts": {
@@ -20,7 +20,7 @@
     "dev:all": "npm-run-all -p watch:server watch:nodecg:all dev:client",
     "run:server": "node dist-server/server.js",
     "run:server:testClient": "node dist-server/testClient.js",
-    "run:client": "http-server -p 80 dist-client/"
+    "run:client": "http-server dist-client/"
   },
   "author": "",
   "license": "MIT",

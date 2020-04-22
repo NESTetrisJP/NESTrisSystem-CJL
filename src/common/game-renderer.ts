@@ -43,13 +43,18 @@ export default class GameRenderer {
   }
 
   static renderHearts(ctx, [active, max], rtl) {
-    for (let i = 0; i < max; i++) {
-      const act = i < active
-      ctx.drawImage(r.heart, act ? 8 : 0, 0, 8, 8, i * 8 * (rtl ? -1 : 1), 0, 8, 8)
+    if (max >= 4) {
+      ctx.drawImage(r.heart, 8, 0, 8, 8, 0, 0, 8, 8)
+      r.drawText(ctx, `${active}/${max}`, rtl ? -24 : 8, 0)
+    } else {
+      for (let i = 0; i < max; i++) {
+        const act = i < active
+        ctx.drawImage(r.heart, act ? 8 : 0, 0, 8, 8, i * 8 * (rtl ? -1 : 1), 0, 8, 8)
+      }
     }
   }
 
-  static renderRoom(references: CanvasReference[][], dataProcessor: DataProcessor, roomName: string, type: number, userToRankIndex?) {
+  static renderRoom(references: CanvasReference[][], dataProcessor: DataProcessor, roomName: string, type: number, userToRankIndex?, ranking?) {
     if (type == 0) {
       references.forEach(set => {
         const canvasSet = new Set<CanvasRenderingContext2D>()
@@ -66,12 +71,35 @@ export default class GameRenderer {
           if (d != null) {
             const ctx = reference.context
             r.drawTextCentered(ctx, userName, 48, 216)
-            const rankString = (userToRankIndex.get(userName) + 1).toString().padStart(2, "0")
-            const bestScoreString = GameRenderer.formatScore(d.bestScore, true)
+            const rank = (userToRankIndex?.get(userName) ?? -1) + 1
+            if (ranking != null) {
+              const rankString = rank.toString()
+              if (rank == 1) {
+                const topScore = ranking[0][1]
+                const nextScore = ranking[1] != null ? ranking[1][1] : topScore
+                const diff = this.formatScore(topScore - nextScore, true)
+                r.drawText(ctx, `#${rankString}:+${diff}`, 8, 8)
+                ctx.globalCompositeOperation = "multiply"
+                ctx.fillStyle = "rgb(53, 202, 53)"
+                ctx.fillRect(32, 8, 56, 8)
+                ctx.globalCompositeOperation = "source-over"
+              } else {
+                const topScore = ranking[0][1]
+                const diff = this.formatScore(topScore - d.score, true)
+                r.drawText(ctx, `#${rankString}:-${diff}`, 8, 8)
+                ctx.globalCompositeOperation = "multiply"
+                ctx.fillStyle = "rgb(255, 40, 0)"
+                ctx.fillRect(32, 8, 56, 8)
+                ctx.globalCompositeOperation = "source-over"
+              }
+            } else {
+              const rankString = rank.toString().padStart(2, "0")
+              const bestScoreString = GameRenderer.formatScore(d.bestScore, true)
+              r.drawText(ctx, `#${rankString}:${bestScoreString}`, 8, 8)
+            }
             const scoreString = GameRenderer.formatScore(d.score, true)
             const levelString = (0).toString().padStart(2, "0")
             const linesString = d.lines.toString().padStart(3, "0")
-            r.drawText(ctx, `#${rankString}:${bestScoreString}`, 8, 8)
             r.drawText(ctx, `${scoreString}-${linesString}`, 8, 16)
             const blockColor = d.level % 10
             ctx.save()
@@ -92,13 +120,15 @@ export default class GameRenderer {
         // Note: (ctxA, 0), (ctxA, 1), (ctxB, 0), (ctxB, 1), ...の順番に並んでいること
         set.forEach((reference, i) => {
           const userName = dataProcessor.getRoomUsers(roomName)[i]
+          const ctx = reference.context
+          const position = reference.position
+          if (position == 0) {
+            ctx.clearRect(0, 0, 256, 224)
+            ctx.drawImage(r.field2P, 0, 0)
+          }
           const d = dataProcessor.getPlayerState(userName)
           if (d != null) {
-            const ctx = reference.context
-            const position = reference.position
             if (position == 0) {
-              ctx.clearRect(0, 0, 256, 224)
-              ctx.drawImage(r.field2P, 0, 0)
               r.drawText(ctx, GameRenderer.formatScore(d.score, false).padEnd(8, " "), 96, 40)
               r.drawText(ctx, String(d.lines).padStart(3, "0"), 96, 88)
               r.drawText(ctx, String(d.level).padStart(2, "0"), 96, 120)
@@ -114,7 +144,7 @@ export default class GameRenderer {
               GameRenderer.renderNext(ctx, d.next, blockColor, 8)
               ctx.restore()
               ctx.save()
-              ctx.translate(96, 208)
+              ctx.translate(92, 208)
               GameRenderer.renderHearts(ctx, dataProcessor.getPlayerInfo(userName).hearts, false)
               ctx.restore()
             }
@@ -134,7 +164,7 @@ export default class GameRenderer {
               GameRenderer.renderNext(ctx, d.next, blockColor, 8)
               ctx.restore()
               ctx.save()
-              ctx.translate(152, 208)
+              ctx.translate(156, 208)
               GameRenderer.renderHearts(ctx, dataProcessor.getPlayerInfo(userName).hearts, true)
               ctx.restore()
             }

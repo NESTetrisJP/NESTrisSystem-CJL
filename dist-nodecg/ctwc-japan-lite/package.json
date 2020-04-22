@@ -1,6 +1,6 @@
 {
   "name": "ctwc-japan-lite",
-  "version": "0.8.2",
+  "version": "0.8.3",
   "description": "",
   "homepage": "",
   "author": {
@@ -31,7 +31,7 @@
       {
         "name": "server",
         "title": "Server",
-        "width": 2,
+        "width": 4,
         "file": "server.html",
         "headerColor": "#525F78"
       }

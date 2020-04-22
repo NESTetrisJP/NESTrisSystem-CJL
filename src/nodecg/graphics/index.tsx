@@ -44,19 +44,23 @@ const reloadIcons = (state) => {
 }
 
 let canvasContexts: CanvasReferences = {
+  "default": [],
   "qualifier": [],
   "qualifier-ranking": [],
   "1v1a": [],
   "1v1b": [],
+  "1v1v1": [],
   "award": []
 }
 
 const updateCanvasContexts = (state) => {
   const result = {
+    "default": [],
     "qualifier": [],
     "qualifier-ranking": [],
     "1v1a": [],
     "1v1b": [],
+    "1v1v1": [],
     "award": []
   }
 
@@ -91,6 +95,11 @@ const updateCanvasContexts = (state) => {
             { context: elements[1].getContext("2d"), position: 1 }
           ])
         }
+      }
+      break
+      case "game-1v1v1": {
+        const elements = Array.from(document.querySelectorAll<HTMLCanvasElement>(`#${view}>.game-container>canvas`))
+        result["1v1v1"].push(elements.map(e => ({ context: e.getContext("2d"), position: null })))
       }
       break
       case "game-award": {
@@ -205,6 +214,14 @@ const constructGameElement = (state, type) => {
           <canvas class="game-1v1-medium" width="256" height="224"></canvas>
         </div>,
       ]
+    case "1v1v1":
+      return [
+        <div class="game-container">
+          <canvas class="game-large" width="96" height="232"></canvas>
+          <canvas class="game-large" width="96" height="232"></canvas>
+          <canvas class="game-large" width="96" height="232"></canvas>
+        </div>,
+      ]
     case "award":
       return [
         <canvas class="award" width="128" height="160"></canvas>
@@ -242,9 +259,9 @@ Promise.all([
         </div>
         { constructGameElement(state, "qualifier") }
         { constructGameElement(state, "1v1") }
-        { /*constructGameElement(state, "1v1v1")*/ }
-        { /*constructGameElement(state, "1v1v1v1")*/ }
         { constructGameElement(state, "1v1-1v1") }
+        { constructGameElement(state, "1v1v1") }
+        { /*constructGameElement(state, "1v1v1v1")*/ }
         { constructGameElement(state, "award") }
         <div id="transition" style={{ left: (-120 + state.transitionPhase * 270) + "px" }}></div>
         {
@@ -252,7 +269,7 @@ Promise.all([
             <button onClick={[startTransition, "title"]}>title</button>
             <button onClick={[startTransition, "game-qualifier"]}>qual</button>
             <button onClick={[startTransition, "game-1v1"]}>2</button>
-            {/*<button onClick={[startTransition, "game-1v1v1"]}>3</button>*/}
+            {<button onClick={[startTransition, "game-1v1v1"]}>3</button>}
             {/*<button onClick={[startTransition, "game-1v1v1v1"]}>4</button>*/}
             <button onClick={[startTransition, "game-1v1-1v1"]}>22</button>
             <button onClick={[startTransition, "game-award"]}>award</button>
@@ -303,11 +320,13 @@ let webSocket = newConnection()
 r.initialize().then(() => {
   const onFrame = () => {
     dataProcessor.onRender()
-    const qualifierRanking = dataProcessor.getRankingOfRoom("qualifier")
+    const qualifierRanking = dataProcessor.getRankingOfRoom("qualifier", true)
+    const _1v1v1Ranking = dataProcessor.getRankingOfRoom("1v1v1", false)
 
     GameRenderer.renderRoom(canvasContexts["qualifier"], dataProcessor, "qualifier", 0, qualifierRanking.userToRankIndex)
     GameRenderer.renderRoom(canvasContexts["1v1a"], dataProcessor, "1v1a", 1)
     GameRenderer.renderRoom(canvasContexts["1v1b"], dataProcessor, "1v1b", 1)
+    GameRenderer.renderRoom(canvasContexts["1v1v1"], dataProcessor, "1v1v1", 0, _1v1v1Ranking.userToRankIndex, _1v1v1Ranking.ranking)
     GameRenderer.renderQualifierRanking(canvasContexts["qualifier-ranking"], qualifierRanking.ranking)
     GameRenderer.renderAward(canvasContexts["award"], currentState.nodecg?.awardedPlayer)
   }

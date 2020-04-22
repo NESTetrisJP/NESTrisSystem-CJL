@@ -17,7 +17,7 @@ const options = commandLineArgs([
 const debug = options.debug ?? false
 const ssl = options.ssl ?? false
 
-logger.info("NESTrisSystem Server v0.8.2")
+logger.info("NESTrisSystem Server v0.8.3")
 if (debug) logger.info("Launching in debug mode.")
 if (ssl) logger.info("Launching in SSL mode.")
 
@@ -32,6 +32,10 @@ const activeUsersMutex = new Mutex()
 const bestScores = new Map<string, number>()
 const hearts = new Map<string, [number, number]>()
 const heartsMutex = new Mutex()
+
+const rooms = ["default", "qualifier", "1v1a", "1v1b", "1v1v1"]
+const userRooms = new Map<string, string>()
+const userRoomsMutex = new Mutex()
 
 let queue = []
 const queueMutex = new Mutex()
@@ -76,8 +80,11 @@ net.createServer(socket => {
           const releaseActiveUsersMutex = await activeUsersMutex.acquire()
           activeUsers.set(data.userName, { socket })
           releaseActiveUsersMutex()
+          const releaseUserRoomsMutex = await userRoomsMutex.acquire()
+          if (!userRooms.has(data.userName)) userRooms.set(data.userName, "default")
+          releaseUserRoomsMutex()
           const releaseHeartsMutex = await heartsMutex.acquire()
-          hearts.set(data.userName, [0, 0])
+          if (!hearts.has(data.userName)) hearts.set(data.userName, [0, 0])
           releaseHeartsMutex()
         } else {
           logger.info(`${userName} (${socket.remoteAddress}) is using older client`)
@@ -180,12 +187,33 @@ net.createServer(async socket => {
   activeAdmins.add(socket)
   releaseActiveAdminsMutex()
 
+  const commandResponse = (message) => socket.write(encode({ type: "commandResponse", message }))
   const rl = readline.createInterface(socket)
   const onData = async (data) => {
-    if (false) {
-      const releaseHeartsMutex = await heartsMutex.acquire()
-      hearts.set(data.userName, [0, 3])
-      releaseHeartsMutex()
+    switch (data.command) {
+      case "setHearts": {
+        const releaseHeartsMutex = await heartsMutex.acquire()
+        hearts.set(data.userName, [data.currentHearts, data.maxHearts])
+        releaseHeartsMutex()
+        commandResponse("setHearts done.")
+      }
+      break
+      case "resetBestScores": {
+        bestScores.clear()
+        commandResponse("resetBestScores done.")
+      }
+      break
+      case "moveToRoom": {
+        if (rooms.indexOf(data.room) >= 0) {
+          const releaseUserRoomsMutex = await userRoomsMutex.acquire()
+          userRooms.set(data.userName, data.room)
+          releaseUserRoomsMutex()
+          commandResponse("moveToRoom done.")
+        } else {
+          commandResponse("moveToRoom: skipping unknown room name.")
+        }
+      }
+      break
     }
   }
 
@@ -220,15 +248,15 @@ net.createServer(async socket => {
 
 setInterval(async () => {
   const releaseQueueMutex = await queueMutex.acquire()
+  const userNames = Array.from(activeUsers.keys())
+  const roomsData = {}
+  rooms.forEach(e => roomsData[e] = [])
+  userNames.forEach(name => roomsData[userRooms.get(name)].push(name))
 
   const buffer = encode({
     timeSent: Date.now(),
-    users: Array.from(activeUsers.keys()).map(name => ({ name, hearts: hearts.get(name) })),
-    rooms: {
-      "qualifier": Array.from(activeUsers.keys()),
-      "1v1a": Array.from(activeUsers.keys()).slice(0, 2),
-      "1v1b": Array.from(activeUsers.keys()).slice(2, 4)
-    },
+    users: userNames.map(name => ({ name, hearts: hearts.get(name) })),
+    rooms: roomsData,
     data: queue
   })
   wss.clients.forEach(client => {

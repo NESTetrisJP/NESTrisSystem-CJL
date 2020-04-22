@@ -1,7 +1,7 @@
 import net from "net"
 import { encode, decode } from "../common/network-codec"
 
-console.log("NESTrisSystem Test Client v0.8.2")
+console.log("NESTrisSystem Test Client v0.8.3")
 for (let i = 0; i < 8; i++) {
   let score = 0
   let end = 0
@@ -31,7 +31,8 @@ for (let i = 0; i < 8; i++) {
       } else {
         const field = new Array(200)
         for (let i = 0; i < 200; i++) {
-          field[i] = Math.floor(Math.random() * 4)
+          if (i < 20) field[i] = 0
+          else field[i] = Math.floor(Math.random() * 4)
         }
         result.push({ time, field, score, level, lines, next, stats })
       }

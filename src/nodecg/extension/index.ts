@@ -12,7 +12,9 @@ export = function (nodecg: NodeCG) {
 			const rl = readline.createInterface(socket)
 
 			const onData = data => {
-
+				if (data.type == "commandResponse") {
+					nodecg.sendMessage("serverCommandResponse", { type: "server", message: data.message })
+				}
 			}
 
 			rl.on("line", data => {
@@ -58,4 +60,52 @@ export = function (nodecg: NodeCG) {
 			socket = connectToServer()
 		}
 	}, 1000)
+
+	nodecg.listenFor("serverCommand", (data) => {
+		const split = (data.match(/(\\.|[^ ])+/g) ?? []).map(s => s.replace(/\\ /g, " ").replace(/\\\\/g, "\\"))
+		const response = (message) => nodecg.sendMessage("serverCommandResponse", { type: "nodecg", message })
+		const command = (argNames, process) => {
+			if (split.length - 1 == argNames.length) {
+				const args = {}
+				argNames.forEach((name, i) => args[name] = split[i + 1])
+				process(args)
+			} else {
+				response(`Arguments: ${argNames.map(e => `[${e}]`).join(" ")}`)
+			}
+		}
+		switch (split[0]) {
+		case "setHearts":
+			command(["userName", "currentHearts", "maxHearts"], args => {
+				socket.write(encode({
+					command: "setHearts",
+					userName: args.userName,
+					currentHearts: Number(args.currentHearts),
+					maxHearts: Number(args.maxHearts)
+				}))
+				response("setHearts sent.")
+			})
+			break
+		case "resetBestScores":
+			command([], () => {
+				socket.write(encode({
+					command: "resetBestScores"
+				}))
+				response("resetBestScores sent.")
+			})
+			break
+		case "moveToRoom":
+			command(["userName", "room"], args => {
+				socket.write(encode({
+					command: "moveToRoom",
+					userName: args.userName,
+					room: args.room
+				}))
+				response("moveToRoom sent.")
+			})
+			break
+		default:
+			response("Unknown command.")
+		}
+
+	})
 }
