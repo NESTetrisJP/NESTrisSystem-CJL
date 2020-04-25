@@ -6,8 +6,6 @@ const r = Renderer.getInstance()
 const a = AudioManager.getInstance()
 
 export default class GameRenderer {
-  mute = false
-
   static formatScore(score, hex) {
     const hexStrings = ["A", "B", "C", "D", "E", "F"]
     if (hex) {
@@ -69,13 +67,11 @@ export default class GameRenderer {
   }
 
   static renderPlayerAudio(quadTimer, gameover) {
-    if (!this.mute) {
-      if (quadTimer == 1) a.quad.play()
-      if (gameover == 1) a.gameover.play()
-    }
+    if (quadTimer == 1) a.quad.play()
+    if (gameover == 1) a.gameover.play()
   }
 
-  static renderRoom(references: CanvasReference[][], dataProcessor: DataProcessor, roomName: string, type: number, userToRankIndex?, ranking?) {
+  static renderRoom(references: CanvasReference[][], dataProcessor: DataProcessor, roomName: string, type: number, mute: boolean, altRanking: boolean = false, rankingData?) {
     if (type == 0) {
       references.forEach(set => {
         const canvasSet = new Set<CanvasRenderingContext2D>()
@@ -92,12 +88,12 @@ export default class GameRenderer {
           if (d != null) {
             const ctx = reference.context
             r.drawTextCentered(ctx, userName, 48, 216)
-            const rank = (userToRankIndex?.get(userName) ?? -1) + 1
-            if (ranking != null) {
+            const rank = (rankingData?.userToRankIndex?.get(userName) ?? -1) + 1
+            if (altRanking) {
               const rankString = rank.toString()
               if (rank == 1) {
-                const topScore = ranking[0][1]
-                const nextScore = ranking[1] != null ? ranking[1][1] : topScore
+                const topScore = rankingData.ranking[0][1]
+                const nextScore = rankingData.ranking[1] != null ? rankingData.ranking[1][1] : topScore
                 const diff = this.formatScore(topScore - nextScore, true)
                 r.drawText(ctx, `#${rankString}:+${diff}`, 8, 8)
                 ctx.globalCompositeOperation = "multiply"
@@ -105,7 +101,7 @@ export default class GameRenderer {
                 ctx.fillRect(32, 8, 56, 8)
                 ctx.globalCompositeOperation = "source-over"
               } else {
-                const topScore = ranking[0][1]
+                const topScore = rankingData.ranking[0][1]
                 const diff = this.formatScore(topScore - d.score, true)
                 r.drawText(ctx, `#${rankString}:-${diff}`, 8, 8)
                 ctx.globalCompositeOperation = "multiply"
@@ -134,7 +130,7 @@ export default class GameRenderer {
             ctx.translate(64, 42)
             GameRenderer.renderNext(ctx, d.next, blockColor, 6)
             ctx.restore()
-            GameRenderer.renderPlayerAudio(d.quadTimer, d.gameover)
+            if (!mute) GameRenderer.renderPlayerAudio(d.quadTimer, d.gameover)
           }
         })
       })
@@ -193,7 +189,7 @@ export default class GameRenderer {
               GameRenderer.renderHearts(ctx, dataProcessor.getPlayerInfo(userName).hearts, -1, true)
               ctx.restore()
             }
-            GameRenderer.renderPlayerAudio(d.quadTimer, d.gameover)
+            if (!mute) GameRenderer.renderPlayerAudio(d.quadTimer, d.gameover)
           }
         })
         const reference = set[0]
@@ -219,14 +215,15 @@ export default class GameRenderer {
     }
   }
 
-  static renderQualifierRanking(references: CanvasReference[], ranking, time) {
+  static renderQualifierRanking(references: CanvasReference[], rankingData, time) {
     references.forEach(reference => {
       const ctx = reference.context
       ctx.clearRect(0, 0, 104, 254)
       ctx.drawImage(r.rankingFrame, 0, 0)
       r.drawText(ctx, "RANKING", 24, 8)
-      ranking.forEach(([userName, score], i) => {
-        r.drawText(ctx, `${i + 1}.${userName}`, 8, 32 + i * 24)
+      rankingData.ranking.forEach(([userName, score], i) => {
+        const rankIndex = rankingData.userToRankIndex.get(userName)
+        r.drawText(ctx, `${rankIndex + 1}.${userName}`, 8, 32 + i * 24)
         const scoreString = String(score)
         r.drawText(ctx, scoreString, 96 - scoreString.length * 8, 40 + i * 24)
       })

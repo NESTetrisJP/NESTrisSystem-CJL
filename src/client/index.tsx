@@ -10,6 +10,8 @@ import GameRenderer from "../common/game-renderer"
 const r = Renderer.getInstance()
 const a = AudioManager.getInstance()
 
+let currentState: any = {}
+
 const selectRoom = (state, name) => {
   return [{
     ...state,
@@ -103,6 +105,10 @@ const updateCanvasContextsEffect = dispatch => {
   setTimeout(() => dispatch(updateCanvasContexts), 100)
 }
 
+const toggleMute = state => {
+  return { ...state, mute: !state.mute }
+}
+
 const constructRoomSelectorElements = (state) => {
   const displayNames = ["ロビー", "予選", "1v1-A", "1v1-B", "1v1v1"]
   const internalNames = ["default", "qualifier", "1v1a", "1v1b", "1v1v1"]
@@ -159,7 +165,8 @@ app({
   init: [
     {
       selectedRoom: "default",
-      roomPlayers: {}
+      roomPlayers: {},
+      mute: false
     }
   ],
   view: state => (
@@ -167,12 +174,14 @@ app({
       <div id="rooms">
         { constructRoomSelectorElements(state) }
       </div>
+      <div class={["mute", state.mute && "mute-active"]} onclick={[toggleMute]}>ミュート</div>
       { constructRoomElement(state, "default") }
       { constructRoomElement(state, "qualifier") }
       { constructRoomElement(state, "1v1a") }
       { constructRoomElement(state, "1v1b") }
       { constructRoomElement(state, "1v1v1") }
       <canvas id="main" width="640" height="360"></canvas>
+      { /* Expose current state */ (() => { currentState = state; return null })() }
     </div>
   ),
   subscriptions: state => [
@@ -222,16 +231,20 @@ Promise.all([
     const qualifierRanking = dataProcessor.getRankingOfRoom("qualifier", true)
     const _1v1v1Ranking = dataProcessor.getRankingOfRoom("1v1v1", false)
 
-    GameRenderer.renderRoom(canvasContexts["default"], dataProcessor, "default", 0)
-    GameRenderer.renderRoom(canvasContexts["qualifier"], dataProcessor, "qualifier", 0, qualifierRanking.userToRankIndex)
-    GameRenderer.renderRoom(canvasContexts["1v1a"], dataProcessor, "1v1a", 1)
-    GameRenderer.renderRoom(canvasContexts["1v1b"], dataProcessor, "1v1b", 1)
-    GameRenderer.renderRoom(canvasContexts["1v1v1"], dataProcessor, "1v1v1", 0, _1v1v1Ranking.userToRankIndex, _1v1v1Ranking.ranking)
-    GameRenderer.renderQualifierRanking(canvasContexts["qualifier-ranking"], qualifierRanking.ranking, dataProcessor.qualifyTime)
+    GameRenderer.renderRoom(canvasContexts["default"], dataProcessor, "default", 0, currentState.mute)
+    GameRenderer.renderRoom(canvasContexts["qualifier"], dataProcessor, "qualifier", 0, currentState.mute, false, qualifierRanking)
+    GameRenderer.renderRoom(canvasContexts["1v1a"], dataProcessor, "1v1a", 1, currentState.mute)
+    GameRenderer.renderRoom(canvasContexts["1v1b"], dataProcessor, "1v1b", 1, currentState.mute)
+    GameRenderer.renderRoom(canvasContexts["1v1v1"], dataProcessor, "1v1v1", 0, currentState.mute, true, _1v1v1Ranking)
+    GameRenderer.renderQualifierRanking(canvasContexts["qualifier-ranking"], qualifierRanking, dataProcessor.qualifyTime)
   }
 
   const _onFrame = () => {
-    onFrame()
+    try {
+      onFrame()
+    } catch (e) {
+      console.error(e)
+    }
     requestAnimationFrame(_onFrame)
   }
   requestAnimationFrame(_onFrame)

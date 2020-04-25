@@ -287,8 +287,8 @@ Promise.all([
     init: [
       {
         nodecg: replicantInitialStates,
-        currentView: "game-qualifier",
-        transitionTo: "",
+        currentView: "title",
+        transitionTo: null,
         transitionPhase: -1,
         footer: "予選スコアアタック",
         roomPlayers: {}
@@ -382,16 +382,17 @@ Promise.all([
   a.initialize(),
   bracketRenderer.initialize()
 ]).then(() => {
+  updateCanvasContexts({ currentView: "title", transitionTo: null })
   const onFrame = () => {
     dataProcessor.onRender()
     const qualifierRanking = dataProcessor.getRankingOfRoom("qualifier", true)
     const _1v1v1Ranking = dataProcessor.getRankingOfRoom("1v1v1", false)
 
-    GameRenderer.renderRoom(canvasContexts["qualifier"], dataProcessor, "qualifier", 0, qualifierRanking.userToRankIndex)
-    GameRenderer.renderRoom(canvasContexts["1v1a"], dataProcessor, "1v1a", 1)
-    GameRenderer.renderRoom(canvasContexts["1v1b"], dataProcessor, "1v1b", 1)
-    GameRenderer.renderRoom(canvasContexts["1v1v1"], dataProcessor, "1v1v1", 0, _1v1v1Ranking.userToRankIndex, _1v1v1Ranking.ranking)
-    GameRenderer.renderQualifierRanking(canvasContexts["qualifier-ranking"], qualifierRanking.ranking, dataProcessor.qualifyTime)
+    GameRenderer.renderRoom(canvasContexts["qualifier"], dataProcessor, "qualifier", 0, false, false, qualifierRanking)
+    GameRenderer.renderRoom(canvasContexts["1v1a"], dataProcessor, "1v1a", 1, false)
+    GameRenderer.renderRoom(canvasContexts["1v1b"], dataProcessor, "1v1b", 1, false)
+    GameRenderer.renderRoom(canvasContexts["1v1v1"], dataProcessor, "1v1v1", 0, false, true, _1v1v1Ranking)
+    GameRenderer.renderQualifierRanking(canvasContexts["qualifier-ranking"], qualifierRanking, dataProcessor.qualifyTime)
     GameRenderer.renderAward(canvasContexts["award"], currentState.nodecg?.awardedPlayer)
     bracketRenderer.render(bracketCanvasContexts["group-a"], "group-a")
     bracketRenderer.render(bracketCanvasContexts["group-b"], "group-b")
@@ -399,7 +400,11 @@ Promise.all([
   }
 
   const _onFrame = () => {
-    onFrame()
+    try {
+      onFrame()
+    } catch (e) {
+      console.error(e)
+    }
     requestAnimationFrame(_onFrame)
   }
   requestAnimationFrame(_onFrame)

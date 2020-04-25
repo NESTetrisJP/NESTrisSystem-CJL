@@ -30,6 +30,25 @@ canvas {
   background-color: #888;
 }
 
+.mute {
+  position: absolute;
+  top: 0;
+  right: 0;
+  padding: 10px 10px;
+  height: 24px;
+  line-height: 24px;
+  cursor: pointer;
+  color: #FFF;
+}
+
+.mute:hover {
+  background-color: #BBB;
+}
+
+.mute-active {
+  background-color: #888;
+}
+
 .game-container {
   position: fixed;
   top: 44px;

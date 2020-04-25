@@ -2,6 +2,7 @@ type Options = {
   messages?: {
     [key: string]: Function
   }
+  replicantNames?: string[]
 }
 
 export default class ReplicantManager {
@@ -21,6 +22,7 @@ export default class ReplicantManager {
       "titleMessage",
       "awardedPlayer"
     ]
+    if (options?.replicantNames != null) this.replicantNames = options.replicantNames
     this.replicants = {}
     this.replicantActions = {}
     this.replicantEffects = {}

@@ -1,6 +1,6 @@
 {
   "name": "nestrisclient-ctwcjapan",
-  "version": "0.8.3",
+  "version": "1.0.0",
   "description": "Hyperapp Sample Project with TypeScript.",
   "main": "index.js",
   "scripts": {

@@ -126,17 +126,24 @@ export default class DataProcessor {
   }
 
   getRankingOfRoom(roomName, topScore: boolean) {
-    const ranking = []
-    const userToRankIndex = new Map<string, number>()
+    const data = []
     this.getRoomUsers(roomName).forEach(userName => {
       const d = this.getPlayerState(userName)
       if (d != null) {
-        ranking.push([userName, topScore ? d.bestScore : d.score])
+        data.push([userName, topScore ? d.bestScore : d.score])
       }
     })
-    ranking.sort((a, b) => b[1] - a[1])
-    ranking.forEach(([name, _], i) => userToRankIndex.set(name, i))
-    return { ranking, userToRankIndex }
+    return DataProcessor.getRanking(data)
   }
 
+  static getRanking(data: [string, number][]) {
+    const ranking = [...data]
+    const userToRankIndex = new Map<string, number>()
+    ranking.sort((a, b) => b[1] - a[1])
+    ranking.forEach(([name, _], i) => {
+      if (i >= 1 && ranking[i][1] == ranking[i-1][1]) { userToRankIndex.set(name, userToRankIndex.get(ranking[i-1][0])) }
+      else userToRankIndex.set(name, i)
+    })
+    return { ranking, userToRankIndex }
+  }
 }
