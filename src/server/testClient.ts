@@ -11,7 +11,7 @@ const port = options.port ?? 5041
 const host = options.host ?? "localhost"
 const num = options.num ?? 8
 
-console.log("NESTrisSystem Test Client v1.0.0")
+console.log("NESTrisSystem Test Client v1.0.1")
 for (let i = 0; i < num; i++) {
   let score = 0
   let end = 0

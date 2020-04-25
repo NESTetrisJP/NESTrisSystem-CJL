@@ -17,7 +17,7 @@ const options = commandLineArgs([
 const debug = options.debug ?? false
 const ssl = options.ssl ?? false
 
-logger.info("NESTrisSystem Server v1.0.0")
+logger.info("NESTrisSystem Server v1.0.1")
 if (debug) logger.info("Launching in debug mode.")
 if (ssl) logger.info("Launching in SSL mode.")
 
@@ -206,7 +206,7 @@ net.createServer(async socket => {
       case "setBestScore": {
         const releaseBestScoresMutex = await bestScoresMutex.acquire()
         bestScores.set(data.userName, data.bestScore)
-        commandResponse("setBestScores done.")
+        commandResponse("setBestScore done.")
         releaseBestScoresMutex()
       }
       break
