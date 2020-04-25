@@ -1,12 +1,14 @@
 import { h, app } from "hyperapp";
 import { Mutex } from "await-semaphore"
 import Renderer from "../common/renderer"
+import AudioManager from "../common/audio-manager"
 import deepEqual from "fast-deep-equal"
 import DataProcessor from "../common/data-processor"
 import { CanvasReferences } from "../common/canvas-references"
 import GameRenderer from "../common/game-renderer"
 
 const r = Renderer.getInstance()
+const a = AudioManager.getInstance()
 
 const selectRoom = (state, name) => {
   return [{
@@ -189,7 +191,7 @@ const newConnection = () => {
   })
 
   sock.addEventListener("message", async (e) => {
-    const data = JSON.parse(await e.data.text())
+    const data = JSON.parse(e.data)
     await dataProcessor.onData(data)
     if (onServerMessageCallback != null) onServerMessageCallback(data)
   })
@@ -210,7 +212,10 @@ const newConnection = () => {
 
 let webSocket = newConnection()
 
-r.initialize().then(() => {
+Promise.all([
+  r.initialize(),
+  a.initialize(),
+]).then(() => {
   updateCanvasContexts({ selectedRoom: "default" })
   const onFrame = () => {
     dataProcessor.onRender()
@@ -222,7 +227,7 @@ r.initialize().then(() => {
     GameRenderer.renderRoom(canvasContexts["1v1a"], dataProcessor, "1v1a", 1)
     GameRenderer.renderRoom(canvasContexts["1v1b"], dataProcessor, "1v1b", 1)
     GameRenderer.renderRoom(canvasContexts["1v1v1"], dataProcessor, "1v1v1", 0, _1v1v1Ranking.userToRankIndex, _1v1v1Ranking.ranking)
-    GameRenderer.renderQualifierRanking(canvasContexts["qualifier-ranking"], qualifierRanking.ranking)
+    GameRenderer.renderQualifierRanking(canvasContexts["qualifier-ranking"], qualifierRanking.ranking, dataProcessor.qualifyTime)
   }
 
   const _onFrame = () => {

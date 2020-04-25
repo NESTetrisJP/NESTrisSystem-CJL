@@ -2,12 +2,15 @@ import { h, app } from "hyperapp"
 import { Mutex } from "await-semaphore"
 import ReplicantManager from "../../common/replicant-manager"
 import Renderer from "../../common/renderer"
+import AudioManager from "../../common/audio-manager"
 import deepEqual from "fast-deep-equal"
 import DataProcessor from "../../common/data-processor"
 import { CanvasReferences } from "../../common/canvas-references"
 import GameRenderer from "../../common/game-renderer"
+import BracketRenderer from "../common/bracket-renderer"
 
 const r = Renderer.getInstance()
+const a = AudioManager.getInstance()
 
 const replicantManager = new ReplicantManager({
   messages: {
@@ -53,6 +56,14 @@ let canvasContexts: CanvasReferences = {
   "award": []
 }
 
+let bracketCanvasContexts = {
+  "group-a": null,
+  "group-b": null,
+  "bracket": null,
+}
+
+const bracketRenderer = new BracketRenderer()
+
 const updateCanvasContexts = (state) => {
   const result = {
     "default": [],
@@ -62,6 +73,12 @@ const updateCanvasContexts = (state) => {
     "1v1b": [],
     "1v1v1": [],
     "award": []
+  }
+
+  const resultBracket = {
+    "group-a": null,
+    "group-b": null,
+    "bracket": null,
   }
 
   ;[state.currentView, state.transitionTo].forEach(view => {
@@ -104,13 +121,29 @@ const updateCanvasContexts = (state) => {
       break
       case "game-award": {
         const element = document.querySelector<HTMLCanvasElement>(`#${view}>.award`)
-        result["award"].push({ context: element.getContext("2d"), position: null })
+        if (element != null) result["award"].push({ context: element.getContext("2d"), position: null })
+      }
+      break
+      case "bracket-group-a": {
+        const element = document.querySelector<HTMLCanvasElement>(`#${view}>canvas`)
+        if (element != null) resultBracket["group-a"] = element.getContext("2d")
+      }
+      break
+      case "bracket-group-b": {
+        const element = document.querySelector<HTMLCanvasElement>(`#${view}>canvas`)
+        if (element != null) resultBracket["group-b"] = element.getContext("2d")
+      }
+      break
+      case "bracket-bracket": {
+        const element = document.querySelector<HTMLCanvasElement>(`#${view}>canvas`)
+        if (element != null) resultBracket["bracket"] = element.getContext("2d")
       }
       break
     }
   })
 
   canvasContexts = result
+  bracketCanvasContexts = resultBracket
   return state
 }
 
@@ -236,6 +269,15 @@ const constructGameElement = (state, type) => {
   </div>
 }
 
+const constructScreen = (state, id, innerElements) => {
+  return <div id={id} style={{ ...calculateClip(state, id) }}>
+    {(state.currentView == id || state.transitionTo == id) && [
+      innerElements,
+      <div class="game-footer">CTWC Japan Lite <span class="game-footer-variable">{state.nodecg.footer}</span></div>
+    ]}
+  </div>
+}
+
 let currentState: any = {}
 
 Promise.all([
@@ -245,8 +287,8 @@ Promise.all([
     init: [
       {
         nodecg: replicantInitialStates,
-        currentView: "title",
-        transitionTo: "game",
+        currentView: "game-qualifier",
+        transitionTo: "",
         transitionPhase: -1,
         footer: "予選スコアアタック",
         roomPlayers: {}
@@ -263,6 +305,24 @@ Promise.all([
         { constructGameElement(state, "1v1v1") }
         { /*constructGameElement(state, "1v1v1v1")*/ }
         { constructGameElement(state, "award") }
+        { constructScreen(state, "bracket-group-a",
+            [
+              <canvas class="bracket-group" width="232" height="184"></canvas>,
+              <div class="game-footer">CTWC Japan Lite <span class="game-footer-variable">{state.nodecg.footer}</span></div>
+            ])
+        }
+        { constructScreen(state, "bracket-group-b",
+            [
+              <canvas class="bracket-group" width="232" height="184"></canvas>,
+              <div class="game-footer">CTWC Japan Lite <span class="game-footer-variable">{state.nodecg.footer}</span></div>
+            ])
+        }
+        { constructScreen(state, "bracket-bracket",
+            [
+              <canvas class="bracket-bracket" width="272" height="152"></canvas>,
+              <div class="game-footer">CTWC Japan Lite <span class="game-footer-variable">{state.nodecg.footer}</span></div>
+            ])
+        }
         <div id="transition" style={{ left: (-120 + state.transitionPhase * 270) + "px" }}></div>
         {
           false && <div id="debug">
@@ -296,7 +356,7 @@ const newConnection = () => {
   })
 
   sock.addEventListener("message", async (e) => {
-    const data = JSON.parse(await e.data.text())
+    const data = JSON.parse(e.data)
     await dataProcessor.onData(data)
     if (onServerMessageCallback != null) onServerMessageCallback(data)
   })
@@ -317,7 +377,11 @@ const newConnection = () => {
 
 let webSocket = newConnection()
 
-r.initialize().then(() => {
+Promise.all([
+  r.initialize(),
+  a.initialize(),
+  bracketRenderer.initialize()
+]).then(() => {
   const onFrame = () => {
     dataProcessor.onRender()
     const qualifierRanking = dataProcessor.getRankingOfRoom("qualifier", true)
@@ -327,8 +391,11 @@ r.initialize().then(() => {
     GameRenderer.renderRoom(canvasContexts["1v1a"], dataProcessor, "1v1a", 1)
     GameRenderer.renderRoom(canvasContexts["1v1b"], dataProcessor, "1v1b", 1)
     GameRenderer.renderRoom(canvasContexts["1v1v1"], dataProcessor, "1v1v1", 0, _1v1v1Ranking.userToRankIndex, _1v1v1Ranking.ranking)
-    GameRenderer.renderQualifierRanking(canvasContexts["qualifier-ranking"], qualifierRanking.ranking)
+    GameRenderer.renderQualifierRanking(canvasContexts["qualifier-ranking"], qualifierRanking.ranking, dataProcessor.qualifyTime)
     GameRenderer.renderAward(canvasContexts["award"], currentState.nodecg?.awardedPlayer)
+    bracketRenderer.render(bracketCanvasContexts["group-a"], "group-a")
+    bracketRenderer.render(bracketCanvasContexts["group-b"], "group-b")
+    bracketRenderer.render(bracketCanvasContexts["bracket"], "bracket")
   }
 
   const _onFrame = () => {

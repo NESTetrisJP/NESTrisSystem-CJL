@@ -136,6 +136,8 @@ export default class Renderer {
     this.rankingFrame = result[6]
     this.heart = result[7]
     this.award = result[8]
+
+    this.loaded = true
   }
 
   /*
@@ -167,6 +169,10 @@ export default class Renderer {
 
   drawTextCentered(ctx, str, dx, dy) {
     this.drawText(ctx, str, dx - str.length * 4, dy)
+  }
+
+  drawTextRTL(ctx, str, dx, dy) {
+    this.drawText(ctx, str, dx - str.length * 8, dy)
   }
 
   requestUserIcon(name: string) {

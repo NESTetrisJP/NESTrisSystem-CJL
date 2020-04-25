@@ -1,8 +1,18 @@
 import net from "net"
 import { encode, decode } from "../common/network-codec"
+import commandLineArgs from "command-line-args"
 
-console.log("NESTrisSystem Test Client v0.8.3")
-for (let i = 0; i < 8; i++) {
+const options = commandLineArgs([
+  { name: "port", type: Number },
+  { name: "host", type: String },
+  { name: "num", type: Number }
+])
+const port = options.port ?? 5041
+const host = options.host ?? "localhost"
+const num = options.num ?? 8
+
+console.log("NESTrisSystem Test Client v1.0.0")
+for (let i = 0; i < num; i++) {
   let score = 0
   let end = 0
   const createDummyData = () => {
@@ -43,13 +53,13 @@ for (let i = 0; i < 8; i++) {
   }
 
   let startTime
-  const client = net.createConnection({ port: 5041 }, () => {
+  const client = net.createConnection(port, host, () => {
     client.on("end", () => {
       console.error("end")
     })
     client.on("data", () => {})
 
-    client.write(encode({ userName: `テストTest${i}`, key: "key", version: 1 }))
+    client.write(encode({ userName: `テストTest${i}`, key: "key", version: 2 }))
 
     startTime = Date.now()
     setInterval(() => {

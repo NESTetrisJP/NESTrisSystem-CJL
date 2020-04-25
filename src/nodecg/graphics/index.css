@@ -24,7 +24,7 @@ canvas {
   text-align: center;
 }
 
-#game-qualifier, #game-1v1, #game-1v1v1, #game-1v1v1v1, #game-1v1-1v1, #game-award {
+#game-qualifier, #game-1v1, #game-1v1v1, #game-1v1v1v1, #game-1v1-1v1, #game-award, #bracket-group-a, #bracket-group-b, #bracket-bracket {
   width: 1920px;
   height: 1080px;
   position: fixed;
@@ -95,6 +95,22 @@ canvas {
   left: 576px;
   width: 768px;
   height: 960px;
+}
+
+#bracket-group-a>canvas, #bracket-group-b>canvas {
+  position: fixed;
+  top: 52px;
+  left: 380px;
+  width: 1160px;
+  height: 920px;
+}
+
+#bracket-bracket>canvas {
+  position: fixed;
+  top: 56px;
+  left: 144px;
+  width: 1632px;
+  height: 912px;
 }
 
 .game-footer {

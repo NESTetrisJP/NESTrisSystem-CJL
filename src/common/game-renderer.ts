@@ -1,9 +1,13 @@
 import Renderer from "./renderer"
+import AudioManager from "./audio-manager"
 import DataProcessor from "./data-processor"
 import { CanvasReference } from "./canvas-references"
 const r = Renderer.getInstance()
+const a = AudioManager.getInstance()
 
 export default class GameRenderer {
+  mute = false
+
   static formatScore(score, hex) {
     const hexStrings = ["A", "B", "C", "D", "E", "F"]
     if (hex) {
@@ -24,6 +28,13 @@ export default class GameRenderer {
     }
   }
 
+  static renderFieldBackground(ctx, quadTimers) {
+    if (quadTimers % 4 >= 2) {
+      ctx.fillStyle = "#FFF"
+      ctx.fillRect(0, 0, 80, 160)
+    }
+  }
+
   static renderField(ctx, field, blockColor) {
     field.forEach((blockId, i) => {
       const dx = ((i % 10) * 8)
@@ -35,6 +46,7 @@ export default class GameRenderer {
   }
 
   static renderNext(ctx, next, blockColor, size) {
+    if (next == null) return
     if (size != 6 && size != 8) return
     const sourceImage = size == 6 ? r.blocks6 : r.blocks
     Renderer.nextPieceRenderingData[next].forEach(e => {
@@ -42,8 +54,10 @@ export default class GameRenderer {
     })
   }
 
-  static renderHearts(ctx, [active, max], rtl) {
-    if (max >= 4) {
+  static renderHearts(ctx, [active, max], text, rtl) {
+    if (text == -1) {
+      GameRenderer.renderHearts(ctx, [active, max], max >= 4 ? 1 : 0, rtl)
+    } else if (text == 1) {
       ctx.drawImage(r.heart, 8, 0, 8, 8, 0, 0, 8, 8)
       r.drawText(ctx, `${active}/${max}`, rtl ? -24 : 8, 0)
     } else {
@@ -51,6 +65,13 @@ export default class GameRenderer {
         const act = i < active
         ctx.drawImage(r.heart, act ? 8 : 0, 0, 8, 8, i * 8 * (rtl ? -1 : 1), 0, 8, 8)
       }
+    }
+  }
+
+  static renderPlayerAudio(quadTimer, gameover) {
+    if (!this.mute) {
+      if (quadTimer == 1) a.quad.play()
+      if (gameover == 1) a.gameover.play()
     }
   }
 
@@ -104,14 +125,16 @@ export default class GameRenderer {
             const blockColor = d.level % 10
             ctx.save()
             ctx.translate(8, 40)
+            GameRenderer.renderFieldBackground(ctx, d.quadTimer)
             GameRenderer.renderIcon(ctx, userName)
             GameRenderer.renderField(ctx, d.field, blockColor)
-            GameRenderer.renderHearts(ctx, dataProcessor.getPlayerInfo(userName).hearts, false)
+            GameRenderer.renderHearts(ctx, dataProcessor.getPlayerInfo(userName).hearts, -1, false)
             ctx.restore()
             ctx.save()
             ctx.translate(64, 42)
             GameRenderer.renderNext(ctx, d.next, blockColor, 6)
             ctx.restore()
+            GameRenderer.renderPlayerAudio(d.quadTimer, d.gameover)
           }
         })
       })
@@ -136,6 +159,7 @@ export default class GameRenderer {
               const blockColor = d.level % 10
               ctx.save()
               ctx.translate(8, 32)
+              GameRenderer.renderFieldBackground(ctx, d.quadTimer)
               GameRenderer.renderIcon(ctx, userName)
               GameRenderer.renderField(ctx, d.field, blockColor)
               ctx.restore()
@@ -145,7 +169,7 @@ export default class GameRenderer {
               ctx.restore()
               ctx.save()
               ctx.translate(92, 208)
-              GameRenderer.renderHearts(ctx, dataProcessor.getPlayerInfo(userName).hearts, false)
+              GameRenderer.renderHearts(ctx, dataProcessor.getPlayerInfo(userName).hearts, -1, false)
               ctx.restore()
             }
             if (position == 1) {
@@ -156,6 +180,7 @@ export default class GameRenderer {
               const blockColor = d.level % 10
               ctx.save()
               ctx.translate(168, 32)
+              GameRenderer.renderFieldBackground(ctx, d.quadTimer)
               GameRenderer.renderIcon(ctx, userName)
               GameRenderer.renderField(ctx, d.field, blockColor)
               ctx.restore()
@@ -165,9 +190,10 @@ export default class GameRenderer {
               ctx.restore()
               ctx.save()
               ctx.translate(156, 208)
-              GameRenderer.renderHearts(ctx, dataProcessor.getPlayerInfo(userName).hearts, true)
+              GameRenderer.renderHearts(ctx, dataProcessor.getPlayerInfo(userName).hearts, -1, true)
               ctx.restore()
             }
+            GameRenderer.renderPlayerAudio(d.quadTimer, d.gameover)
           }
         })
         const reference = set[0]
@@ -193,7 +219,7 @@ export default class GameRenderer {
     }
   }
 
-  static renderQualifierRanking(references: CanvasReference[], ranking) {
+  static renderQualifierRanking(references: CanvasReference[], ranking, time) {
     references.forEach(reference => {
       const ctx = reference.context
       ctx.clearRect(0, 0, 104, 254)
@@ -204,6 +230,18 @@ export default class GameRenderer {
         const scoreString = String(score)
         r.drawText(ctx, scoreString, 96 - scoreString.length * 8, 40 + i * 24)
       })
+      if (time != null) {
+        const hour = String(Math.floor(time / (1000 * 60 * 60)))
+        const minute = String(Math.floor(time / (1000 * 60)) % 60).padStart(2, "0")
+        const second = String(Math.floor(time / 1000) % 60).padStart(2, "0")
+        r.drawTextCentered(ctx, `${hour}:${minute}:${second}`, 52, 238)
+      } else {
+        r.drawTextCentered(ctx, "0:00:00", 52, 238)
+        ctx.globalCompositeOperation = "multiply"
+        ctx.fillStyle = "#888"
+        ctx.fillRect(8, 238, 88, 8)
+        ctx.globalCompositeOperation = "source-over"
+      }
     })
   }
 

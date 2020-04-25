@@ -85,6 +85,16 @@ export = function (nodecg: NodeCG) {
 				response("setHearts sent.")
 			})
 			break
+		case "setBestScore":
+			command(["userName", "bestScore"], args => {
+				socket.write(encode({
+					command: "setBestScore",
+					userName: args.userName,
+					bestScore: Number(args.bestScore)
+				}))
+				response("setBestScore sent.")
+			})
+			break
 		case "resetBestScores":
 			command([], () => {
 				socket.write(encode({
@@ -101,6 +111,22 @@ export = function (nodecg: NodeCG) {
 					room: args.room
 				}))
 				response("moveToRoom sent.")
+			})
+			break
+		case "startQualifier":
+			command([], () => {
+				socket.write(encode({
+					command: "startQualifier"
+				}))
+				response("startQualifier sent.")
+			})
+			break
+		case "endQualifier":
+			command([], () => {
+				socket.write(encode({
+					command: "endQualifier"
+				}))
+				response("endQualifier sent.")
 			})
 			break
 		default:

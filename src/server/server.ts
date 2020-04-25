@@ -17,7 +17,7 @@ const options = commandLineArgs([
 const debug = options.debug ?? false
 const ssl = options.ssl ?? false
 
-logger.info("NESTrisSystem Server v0.8.3")
+logger.info("NESTrisSystem Server v1.0.0")
 if (debug) logger.info("Launching in debug mode.")
 if (ssl) logger.info("Launching in SSL mode.")
 
@@ -30,6 +30,7 @@ loginListFile.forEach(e => {
 const activeUsers = new Map<string, { socket: net.Socket }>()
 const activeUsersMutex = new Mutex()
 const bestScores = new Map<string, number>()
+const bestScoresMutex = new Mutex()
 const hearts = new Map<string, [number, number]>()
 const heartsMutex = new Mutex()
 
@@ -39,6 +40,8 @@ const userRoomsMutex = new Mutex()
 
 let queue = []
 const queueMutex = new Mutex()
+
+let qualifyStartTime = null
 
 const merge = (a, b) => {
   let i = 0
@@ -74,7 +77,7 @@ net.createServer(socket => {
     if (data.userName != null && data.key != null) {
       if (debug || loginList.get(data.userName) == data.key) {
         userName = data.userName
-        if (data.version == 1) {
+        if (data.version == 2) {
           loginSuccess = true
           logger.info(`${userName} logged in (${socket.remoteAddress})`)
           const releaseActiveUsersMutex = await activeUsersMutex.acquire()
@@ -107,7 +110,9 @@ net.createServer(socket => {
           if (e.score != null) bestScore = Math.max(bestScore, e.score)
           return { ...e, userName, time: e.time + averageDelay, bestScore }
         })
+        const releaseBestScoresMutex = await bestScoresMutex.acquire()
         bestScores.set(userName, bestScore)
+        releaseBestScoresMutex()
         queue = merge(queue, newData)
         // console.log(queue)
         releaseQueueMutex()
@@ -198,9 +203,18 @@ net.createServer(async socket => {
         commandResponse("setHearts done.")
       }
       break
+      case "setBestScore": {
+        const releaseBestScoresMutex = await bestScoresMutex.acquire()
+        bestScores.set(data.userName, data.bestScore)
+        commandResponse("setBestScores done.")
+        releaseBestScoresMutex()
+      }
+      break
       case "resetBestScores": {
+        const releaseBestScoresMutex = await bestScoresMutex.acquire()
         bestScores.clear()
         commandResponse("resetBestScores done.")
+        releaseBestScoresMutex()
       }
       break
       case "moveToRoom": {
@@ -212,6 +226,16 @@ net.createServer(async socket => {
         } else {
           commandResponse("moveToRoom: skipping unknown room name.")
         }
+      }
+      break
+      case "startQualifier": {
+        qualifyStartTime = Date.now()
+        commandResponse("startQualifier done.")
+      }
+      break
+      case "endQualifier": {
+        qualifyStartTime = null
+        commandResponse("endQualifier done.")
       }
       break
     }
@@ -252,9 +276,11 @@ setInterval(async () => {
   const roomsData = {}
   rooms.forEach(e => roomsData[e] = [])
   userNames.forEach(name => roomsData[userRooms.get(name)].push(name))
+  const qualifyTime = qualifyStartTime != null ? Date.now() - qualifyStartTime : null
 
-  const buffer = encode({
+  const buffer = JSON.stringify({
     timeSent: Date.now(),
+    qualifyTime,
     users: userNames.map(name => ({ name, hearts: hearts.get(name) })),
     rooms: roomsData,
     data: queue
