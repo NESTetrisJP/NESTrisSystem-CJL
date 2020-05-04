@@ -5,7 +5,7 @@ import fs from "fs"
 import readline from "readline"
 import commandLineArgs from "command-line-args"
 import { Mutex } from "await-semaphore"
-import { encode, decodeStr } from "../common/network-codec"
+import encode from "../common-node/packet-encoder"
 import SimpleNodeLogger from "simple-node-logger"
 
 const logger = SimpleNodeLogger.createSimpleLogger("server.log")
@@ -132,7 +132,7 @@ net.createServer(socket => {
   // socket.on("data", data => {
   rl.on("line", data => {
     try {
-      onData(decodeStr(data))
+      onData(JSON.parse(data))
     } catch {
       logger.error(`Received invalid data from ${userName} (${socket.remoteAddress}): ` + data)
       socket.end(encode({ reason: "Invalid data." }))
@@ -244,7 +244,7 @@ net.createServer(async socket => {
   // socket.on("data", (data) => {
   rl.on("line", data => {
     try {
-      onData(decodeStr(data))
+      onData(JSON.parse(data))
     } catch {
       logger.error(`Received invalid data from admin socket (${socket.remoteAddress}): ` + data)
       socket.end(encode({ reason: "Invalid data." }))

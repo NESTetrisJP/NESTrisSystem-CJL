@@ -10,7 +10,7 @@ import rankingFrame from "./images/ranking_frame.png"
 import heart from "./images/heart.png"
 import award from "./images/award.png"
 
-import unicodeToKuten from "../unicode-to-kuten.json"
+import unicodeToKuten from "./unicode-to-kuten.json"
 
 class UserIconLoader {
   name: string

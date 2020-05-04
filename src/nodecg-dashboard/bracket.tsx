@@ -1,7 +1,7 @@
 import { h, app } from "hyperapp"
-import ReplicantManager from "../../common/replicant-manager"
-import Renderer from "../../common/renderer"
-import BracketRenderer from "../common/bracket-renderer"
+import ReplicantManager from "../common-nodecg-dom/replicant-manager"
+import Renderer from "../common-dom/renderer"
+import BracketRenderer from "../common-nodecg-dom/bracket-renderer"
 
 const r = Renderer.getInstance()
 const bracketRenderer = new BracketRenderer()

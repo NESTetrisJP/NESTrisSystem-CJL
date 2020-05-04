@@ -1,5 +1,5 @@
 import { h, app } from "hyperapp"
-import ReplicantManager from "../../common/replicant-manager"
+import ReplicantManager from "../common-nodecg-dom/replicant-manager"
 
 const replicantManager = new ReplicantManager({
   messages: {

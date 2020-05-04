@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2019", "DOM"],
+    "jsx": "react",
+    "jsxFactory": "h",
+  },
+  "include": [
+    "./**/*",
+    "../common/**/*",
+    "../common-dom/**/*",
+    "../common-nodecg/**/*",
+    "../common-nodecg-dom/**/*"
+  ]
+}

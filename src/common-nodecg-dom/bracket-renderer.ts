@@ -1,8 +1,8 @@
 import groupBackground from "./images/group-background.png"
 import bracketBackground from "./images/bracket-background.png"
-import Renderer from "../../common/renderer"
-import GameRenderer from "../../common/game-renderer"
-import DataProcessor from "../../common/data-processor"
+import Renderer from "../common-dom/renderer"
+import GameRenderer from "../common-dom/game-renderer"
+import DataProcessor from "../common-dom/data-processor"
 const r = Renderer.getInstance()
 
 export default class BracketRenderer {
@@ -11,8 +11,8 @@ export default class BracketRenderer {
     "rgb(250, 245, 0)",
     "rgb(255, 40, 0)"
   ]
-  bracketDataReplicant: Replicant
-  data = null
+  bracketDataReplicant: NodeCG.Replicant<"bracketData">
+  data: BracketData = null
   /*
   {
     "group-a": {
@@ -49,9 +49,9 @@ export default class BracketRenderer {
   }
   */
   backgrounds = {
-    "group-a": null,
-    "group-b": null,
-    "bracket": null
+    "group-a": <HTMLImageElement>null,
+    "group-b": <HTMLImageElement>null,
+    "bracket": <HTMLImageElement>null,
   }
 
   constructor() {
@@ -74,12 +74,12 @@ export default class BracketRenderer {
     this.backgrounds["bracket"] = result[1]
   }
 
-  render(ctx: CanvasRenderingContext2D, type: string) {
+  render(ctx: CanvasRenderingContext2D, type: keyof(BracketData)) {
     if (ctx == null) return
     if (this.data == null) return
     ctx.drawImage(this.backgrounds[type], 0, 0)
-    const data = this.data[type]
     if (type == "group-a" || type == "group-b") {
+      const data = this.data[type]
       ;[0, 1, 2].forEach(i => {
         r.drawTextCentered(ctx, data.players[i], 44 + i * 72, 16)
       })
@@ -106,6 +106,7 @@ export default class BracketRenderer {
         ctx.restore()
       })
     } else if (type == "bracket") {
+      const data = this.data[type]
       if (data.players[0] != null) r.drawText(ctx, data.players[0], 8, 8)
       if (data.players[1] != null) r.drawText(ctx, data.players[1], 8, 56)
       if (data.players[2] != null) r.drawTextRTL(ctx, data.players[2], 264, 88)

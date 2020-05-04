@@ -1,5 +1,5 @@
 import net from "net"
-import { encode, decode } from "../common/network-codec"
+import encode from "../common-node/packet-encoder"
 import commandLineArgs from "command-line-args"
 
 const options = commandLineArgs([

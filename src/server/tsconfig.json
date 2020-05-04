@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "lib": ["ES2019"],
+    "types": ["node"]
+  },
+  "include": [
+    "./**/*",
+    "../common/**/*",
+    "../common-node/**/*"
+  ]
+}

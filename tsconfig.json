@@ -1,7 +1,9 @@
 {
   "compilerOptions": {
-    "jsx": "react",
-    "jsxFactory": "h",
+    "lib": ["ES2019"],
+    "target": "ES5",
+    "types": [],
+    "module": "CommonJS",
     "resolveJsonModule": true,
     "esModuleInterop": true
   }

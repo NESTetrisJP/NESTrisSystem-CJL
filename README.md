@@ -30,13 +30,18 @@ For NESTrisOCR-CJL, see [NESTetrisJP/NESTrisOCR-CJL](https://github.com/NESTetri
 * `src/`: Source files.
   * `client/`: *Client* source files.
   * `common/`: Source files common to *Client*, *Server*, and *NodeCG Bundle*.
-  * `nodecg/`: *NodeCG Bundle* source files.
-    * `common/`: Source files common to *NodeCG Graphics* and *NodeCG Dashboard*.
-    * `dashboard/`: *NodeCG Dashboard* source files.
-    * `extension/`: *NodeCG Extension* source files.
-    * `graphics/`: *NodeCG Graphics* source files.
+  * `common-dom/`: Source files common to *Client*, *NodeCG Graphics*, and *NodeCG Dashboard*.
+  * `common-node/`: Source files common to *Server* and *NodeCG Extension*.
+  * `common-nodecg/`: Source files common among *NodeCG Bundle*.
+  * `common-nodecg-dom/`: Source files common to *NodeCG Graphics* and *NodeCG Dashboard*.
+  * `nodecg-dashboard/`: *NodeCG Dashboard* source files.
+  * `nodecg-extension/`: *NodeCG Extension* source files.
+  * `nodecg-graphics/`: *NodeCG Graphics* source files.
   * `server/`: *Server* and *Server Test Client* source files.
+  * `tools/`: Misc tools which don't require transpilation.
 * `types/`: TypeScript type definitions.
+
+See also [doc/src-dir.txt](doc/src-dir.txt).
 
 ## Setup
 

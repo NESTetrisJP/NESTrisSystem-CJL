@@ -1,7 +1,6 @@
 import Renderer from "./renderer"
 import AudioManager from "./audio-manager"
 import DataProcessor from "./data-processor"
-import { CanvasReference } from "./canvas-references"
 const r = Renderer.getInstance()
 const a = AudioManager.getInstance()
 

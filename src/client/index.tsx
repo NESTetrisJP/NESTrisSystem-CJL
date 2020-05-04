@@ -1,11 +1,9 @@
 import { h, app } from "hyperapp";
-import { Mutex } from "await-semaphore"
-import Renderer from "../common/renderer"
-import AudioManager from "../common/audio-manager"
+import Renderer from "../common-dom/renderer"
+import AudioManager from "../common-dom/audio-manager"
 import deepEqual from "fast-deep-equal"
-import DataProcessor from "../common/data-processor"
-import { CanvasReferences } from "../common/canvas-references"
-import GameRenderer from "../common/game-renderer"
+import DataProcessor from "../common-dom/data-processor"
+import GameRenderer from "../common-dom/game-renderer"
 
 const r = Renderer.getInstance()
 const a = AudioManager.getInstance()

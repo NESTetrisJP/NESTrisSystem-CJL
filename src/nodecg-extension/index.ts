@@ -1,6 +1,6 @@
 import net from "net"
 import readline from "readline"
-import { encode, decodeStr } from "../../common/network-codec"
+import encode from "../common-node/packet-encoder"
 
 export = function (nodecg: NodeCG) {
 	const serverActive = nodecg.Replicant("serverActive", { defaultValue: false })
@@ -19,7 +19,7 @@ export = function (nodecg: NodeCG) {
 
 			rl.on("line", data => {
 				try {
-					onData(decodeStr(data))
+					onData(JSON.parse(data))
 				} catch {
 					nodecg.log.error("NESTrisServer responded invalid data: " + data)
 				}

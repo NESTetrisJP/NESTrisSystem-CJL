@@ -1,0 +1,16 @@
+1. Browser
+2. Browser with NodeCG
+3. Node.js
+4. Node.js with NodeCG
+
+src/                1 2 3 4
+  client            v
+  common            v v v v
+  common-dom        v v
+  common-node           v v
+  common-nodecg       v   v
+  common-nodecg-dom   v
+  nodecg-dashboard    v
+  nodecg-extension        v
+  nodecg-graphics     v
+  server                v
