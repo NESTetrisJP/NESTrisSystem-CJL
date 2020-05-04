@@ -23,9 +23,7 @@ if (ssl) logger.info("Launching in SSL mode.")
 
 const loginList = new Map<string, string>()
 const loginListFile = JSON.parse(fs.readFileSync("loginlist.json", "utf8"))
-loginListFile.forEach(e => {
-  loginList.set(e.userName, e.key)
-})
+loginListFile.forEach(e => loginList.set(e.userName, e.key))
 
 const activeUsers = new Map<string, { socket: net.Socket }>()
 const activeUsersMutex = new Mutex()
@@ -34,16 +32,16 @@ const bestScoresMutex = new Mutex()
 const hearts = new Map<string, [number, number]>()
 const heartsMutex = new Mutex()
 
-const rooms = ["default", "qualifier", "1v1a", "1v1b", "1v1v1"]
+const rooms = ["default", "qualifier", "1v1a", "1v1b", "1v1v1"] as RoomName[]
 const userRooms = new Map<string, string>()
 const userRoomsMutex = new Mutex()
 
-let queue = []
+let queue = [] as ExtendedPlayerFrame[]
 const queueMutex = new Mutex()
 
-let qualifyStartTime = null
+let qualifyStartTime = null as number
 
-const merge = (a, b) => {
+const merge = (a: ExtendedPlayerFrame[], b: ExtendedPlayerFrame[]) => {
   let i = 0
   let j = 0
   const result = []
@@ -67,14 +65,14 @@ const merge = (a, b) => {
 
 net.createServer(socket => {
   let loginSuccess = false
-  let userName = null
+  let userName = null as string
   let bucketReceived = 0
   let averageDelay = 0
   const onDataMutex = new Mutex()
   const rl = readline.createInterface(socket)
-  const onData = async (data) => {
+  const onData = async (data: PlayerPacket) => {
     const releaseOnDataMutex = await onDataMutex.acquire()
-    if (data.userName != null && data.key != null) {
+    if ("userName" in data && "key" in data) {
       if (debug || loginList.get(data.userName) == data.key) {
         userName = data.userName
         if (data.version == 2) {
@@ -98,7 +96,7 @@ net.createServer(socket => {
         socket.end(encode({ reason: "Invalid login info" }))
       }
     } else if (loginSuccess) {
-      if (Array.isArray(data.data)) {
+      if ("data" in data) {
         const releaseQueueMutex = await queueMutex.acquire()
         const clientTime = data.timeSent
         const serverTime = Date.now()
@@ -108,7 +106,7 @@ net.createServer(socket => {
         let bestScore = bestScores.get(userName) ?? 0
         const newData = data.data.map(e => {
           if (e.score != null) bestScore = Math.max(bestScore, e.score)
-          return { ...e, userName, time: e.time + averageDelay, bestScore }
+          return { ...e, userName, time: e.time + averageDelay, bestScore } as ExtendedPlayerFrame
         })
         const releaseBestScoresMutex = await bestScoresMutex.acquire()
         bestScores.set(userName, bestScore)
@@ -192,9 +190,9 @@ net.createServer(async socket => {
   activeAdmins.add(socket)
   releaseActiveAdminsMutex()
 
-  const commandResponse = (message) => socket.write(encode({ type: "commandResponse", message }))
+  const commandResponse = (message: string) => socket.write(encode({ type: "commandResponse", message }))
   const rl = readline.createInterface(socket)
-  const onData = async (data) => {
+  const onData = async (data: CommandPacket) => {
     switch (data.command) {
       case "setHearts": {
         const releaseHeartsMutex = await heartsMutex.acquire()
@@ -273,9 +271,9 @@ net.createServer(async socket => {
 setInterval(async () => {
   const releaseQueueMutex = await queueMutex.acquire()
   const userNames = Array.from(activeUsers.keys())
-  const roomsData = {}
+  const roomsData = {} as RoomsData
   rooms.forEach(e => roomsData[e] = [])
-  userNames.forEach(name => roomsData[userRooms.get(name)].push(name))
+  userNames.forEach(name => roomsData[userRooms.get(name) as RoomName].push(name))
   const qualifyTime = qualifyStartTime != null ? Date.now() - qualifyStartTime : null
 
   const buffer = JSON.stringify({
@@ -284,7 +282,7 @@ setInterval(async () => {
     users: userNames.map(name => ({ name, hearts: hearts.get(name) })),
     rooms: roomsData,
     data: queue
-  })
+  } as ServerPacket)
   wss.clients.forEach(client => {
     if (client.readyState == ws.OPEN) {
       client.send(buffer)

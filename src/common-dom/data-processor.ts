@@ -30,8 +30,8 @@ type UserState = any
 export default class DataProcessor {
   bucketReceived = 0
   averageDelay = 0
-  bucketProcessors: BucketProcessor[] = []
-  bucketProcessorsAhead: BucketProcessor[] = []
+  bucketProcessors = <BucketProcessor[]>[]
+  bucketProcessorsAhead = <BucketProcessor[]>[]
   messageMutex = new Mutex()
   playerStates = new Map<string, UserState>()
   linesAhead = new Map<string, number>()

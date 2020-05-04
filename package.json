@@ -25,6 +25,7 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
+    "@types/command-line-args": "^5.0.0",
     "@types/node": "12",
     "@types/ws": "^7.2.3",
     "await-semaphore": "^0.1.3",

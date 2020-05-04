@@ -34,7 +34,7 @@ for (let i = 0; i < num; i++) {
         for (let i = 0; i < 200; i++) {
           field[i] = 1
         }
-        result.push({ time, field, score, level, lines, next, stats })
+        result.push({ time, field, score, level, lines, next, stats } as PlayerFrame)
       } else if (end > 0) {
         score = 0
         result.push({ time })
@@ -44,7 +44,7 @@ for (let i = 0; i < num; i++) {
           if (i < 20) field[i] = 0
           else field[i] = Math.floor(Math.random() * 4)
         }
-        result.push({ time, field, score, level, lines, next, stats })
+        result.push({ time, field, score, level, lines, next, stats } as PlayerFrame)
       }
     }
     end--
@@ -52,19 +52,19 @@ for (let i = 0; i < num; i++) {
     return result
   }
 
-  let startTime
+  let startTime: number
   const client = net.createConnection(port, host, () => {
     client.on("end", () => {
       console.error("end")
     })
     client.on("data", () => {})
 
-    client.write(encode({ userName: `テストTest${i}`, key: "key", version: 2 }))
+    client.write(encode({ userName: `テストTest${i}`, key: "key", version: 2 } as PlayerPacketLogin))
 
     startTime = Date.now()
     setInterval(() => {
       if (!client.destroyed) {
-        client.write(encode({ timeSent: Date.now(), data: createDummyData() }))
+        client.write(encode({ timeSent: Date.now(), data: createDummyData() } as PlayerPacket))
       }
     }, 200)
   })
