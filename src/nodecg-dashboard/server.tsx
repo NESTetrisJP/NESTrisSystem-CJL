@@ -1,4 +1,4 @@
-import { h, app } from "hyperapp"
+import { h, app, Action } from "hyperapp"
 import ReplicantManager from "../common-nodecg-dom/replicant-manager"
 
 const replicantManager = new ReplicantManager({
@@ -8,27 +8,19 @@ const replicantManager = new ReplicantManager({
     }
   }
 })
-const { updateFromInput, sendMessage } = replicantManager.getHelperFunctions()
 
-const resetQualifierScore = (state) => {
-  nodecg.sendMessage("resetQualifierScore")
-  return state
+type State = {
+  serverCommandLog: ServerCommandResponse[]
+
 }
 
-const confirmAction = (action) => {
-  if (window.confirm("マジ？")) {
-    return [action]
-  }
-  return [(state) => state]
-}
-
-const sendServerCommand = (state) => {
+const sendServerCommand: Action<State> = state => {
   const command = document.querySelector<HTMLInputElement>("#serverCommand").value
   nodecg.sendMessage("serverCommand", command)
   return { ...state, serverCommandLog: [{ type: "client", message: command }, ...state.serverCommandLog] }
 }
 
-const receiveServerCommandResponse = (state, message) => {
+const receiveServerCommandResponse: Action<State, ServerCommandResponse> = (state, message) => {
   return { ...state, serverCommandLog: [message, ...state.serverCommandLog] }
 }
 

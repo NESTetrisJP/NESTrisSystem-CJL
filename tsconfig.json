@@ -5,6 +5,7 @@
     "types": [],
     "module": "CommonJS",
     "resolveJsonModule": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "noImplicitAny": true
   }
 }

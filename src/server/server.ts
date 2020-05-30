@@ -32,11 +32,11 @@ const bestScoresMutex = new Mutex()
 const hearts = new Map<string, [number, number]>()
 const heartsMutex = new Mutex()
 
-const rooms = ["default", "qualifier", "1v1a", "1v1b", "1v1v1"] as RoomName[]
+const rooms: RoomName[] = ["default", "qualifier", "1v1a", "1v1b", "1v1v1"]
 const userRooms = new Map<string, string>()
 const userRoomsMutex = new Mutex()
 
-let queue = [] as ExtendedPlayerFrame[]
+let queue: ExtendedPlayerFrame[] = []
 const queueMutex = new Mutex()
 
 let qualifyStartTime = null as number
@@ -104,9 +104,9 @@ net.createServer(socket => {
         averageDelay = averageDelay / (bucketReceived + 1) * bucketReceived + thisDelay / (bucketReceived + 1)
         bucketReceived = Math.min(bucketReceived + 1, 100)
         let bestScore = bestScores.get(userName) ?? 0
-        const newData = data.data.map(e => {
+        const newData: ExtendedPlayerFrame[] = data.data.map(e => {
           if (e.score != null) bestScore = Math.max(bestScore, e.score)
-          return { ...e, userName, time: e.time + averageDelay, bestScore } as ExtendedPlayerFrame
+          return { ...e, userName, time: e.time + averageDelay, bestScore }
         })
         const releaseBestScoresMutex = await bestScoresMutex.acquire()
         bestScores.set(userName, bestScore)

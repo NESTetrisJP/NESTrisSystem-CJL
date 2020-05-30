@@ -1,67 +1,62 @@
-type Options = {
-  messages?: {
-    [key: string]: Function
-  }
-  replicantNames?: string[]
+import { Action, Dispatch, Dispatchable } from "hyperapp"
+
+declare global {
 }
 
-export default class ReplicantManager {
+type State<R extends ReplicantNames> = {
+  nodecg: Pick<ReplicantTypes, R>
+}
+
+export default class ReplicantManager<R extends ReplicantNames, M extends MessageNames> {
   replicantNames: string[]
-  replicants: {[key: string]: Replicant}
-  replicantActions: {[key: string]: Function}
-  replicantEffects: {[key: string]: Function}
-  replicantSubscriptions: {[key: string]: [Function, {}]}
+  replicants: {[key in R]: NodeCG.Replicant<key>}
+  replicantActions: {[key in R]: <S extends State<R>>(state: S, newValue: ReplicantTypes[key]) => S}
+  replicantEffects: {[key in R]: <S extends State<R>>(dispatch: Dispatch<S, ReplicantTypes[key]>, {}) => void}
+  replicantSubscriptions: {[key in R]: [Function, {}]}
 
-  messageEffects: {[key: string]: Function}
-  messageSubscriptions: {[key: string]: [Function, {}]}
+  messageEffects: {[key in M]: <S extends State<R>>(dispatch: Dispatch<S>, {}) => void}
+  messageSubscriptions: {[key in M]: [Function, {}]}
 
-  constructor(options?: Options) {
-    this.replicantNames = [
-      "serverActive",
-      "footer",
-      "titleMessage",
-      "awardedPlayer"
-    ]
-    if (options?.replicantNames != null) this.replicantNames = options.replicantNames
-    this.replicants = {}
-    this.replicantActions = {}
-    this.replicantEffects = {}
-    this.replicantSubscriptions = {}
+  constructor(replicantNames: R[], messages: { [key in M]: <T, S extends State<R>>(dispatch: Dispatch<S, T>, data: MessageDataTypes[key]) => void }) {
+    this.replicantNames = replicantNames
+    this.replicants = {} as any
+    this.replicantActions = {} as any
+    this.replicantEffects = {} as any
+    this.replicantSubscriptions = {} as any
 
-    this.messageEffects = {}
-    this.messageSubscriptions = {}
+    this.messageEffects = {} as any
+    this.messageSubscriptions = {} as any
 
-    this.replicantNames.forEach(name => {
+    this.replicantNames.forEach((name: R) => {
       this.replicants[name] = nodecg.Replicant(name)
       this.replicantActions[name] = (state, newValue) => ({ ...state, nodecg: { ...state.nodecg, [name]: newValue } })
-      this.replicantEffects[name] = (dispatch, {}) => {
-        const onChange = (newValue, oldValue) => {
+      this.replicantEffects[name] = <S extends State<R>>(dispatch: (obj: Dispatchable<S, any, any>, data: ReplicantTypes[R]) => void, {}) => { // urgh!
+      // this.replicantEffects[name] = (dispatch, {}) => {
+        const onChange = (newValue: ReplicantTypes[R], oldValue: ReplicantTypes[R]) => {
           setTimeout(() => {
-            // setTimeoutしないと無限再帰する…
+            // no setTimeout results in infinite loop
             dispatch(this.replicantActions[name], newValue)
           })
         }
         this.replicants[name].on("change", onChange)
-        return () => this.replicants[name].off("change", onChange)
+        return () => this.replicants[name].removeListener("change", onChange)
       }
       this.replicantSubscriptions[name] = [this.replicantEffects[name], {}]
     })
 
-    if (options?.messages != null) {
-      Object.keys(options.messages).forEach(message => {
-        this.messageEffects[message] = (dispatch, {}) => {
-          const onMessage = (data) => options.messages[message](dispatch, data)
-          nodecg.listenFor(message, onMessage)
-          return () => nodecg.unlisten(message, onMessage)
-        }
-        this.messageSubscriptions[message] = [this.messageEffects[message], {}]
-      })
-    }
+    Object.keys(messages).forEach((message: M) => {
+      this.messageEffects[message] = (dispatch, {}) => {
+        const onMessage = (data: MessageDataTypes[M]) => messages[message](dispatch, data)
+        nodecg.listenFor(message, onMessage)
+        return () => nodecg.unlisten(message, onMessage)
+      }
+      this.messageSubscriptions[message] = [this.messageEffects[message], {}]
+    })
   }
 
   async initialize() {
-    const initialStates = {}
-    await Promise.all(this.replicantNames.map(name => {
+    const initialStates = {} as State<R>["nodecg"]
+    await Promise.all(this.replicantNames.map((name: R) => {
       return new Promise((resolve, reject) => nodecg.readReplicant(name, value => {
           initialStates[name] = value
           resolve()
@@ -71,7 +66,7 @@ export default class ReplicantManager {
     return initialStates
   }
 
-  getReplicant(name) {
+  getReplicant(name: R) {
     return this.replicants[name]
   }
 
@@ -83,15 +78,17 @@ export default class ReplicantManager {
   }
   getHelperFunctions() {
     return {
-      updateFromInput: (state, [id, replicantName]) => {
+      updateFromInput: <S extends State<R>>(state: S, [id, replicantName]: [string, R & { [key in ReplicantNames]: ReplicantTypes[key] extends string ? key : never }[ReplicantNames]]): S => {
         const value = (document.querySelector(`#${id}`) as HTMLInputElement).value
-        this.getReplicant(replicantName).value = value
+        this.getReplicant(replicantName).value = value as ReplicantTypes[R] // urgh!
         return { ...state, nodecg: { ...state.nodecg, [replicantName]: value } }
       },
-      sendMessage: (state, [message, data]) => {
+      sendMessage: <S extends State<R>>(state: S, [message, data]: [M, MessageTypes[M]["data"]]) => {
         nodecg.sendMessage(message, data)
         return state
       }
     }
   }
 }
+
+const a = new ReplicantManager(["footer"], {})

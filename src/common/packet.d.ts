@@ -5,7 +5,7 @@ declare global {
     score: number
     level: number
     lines: number
-    next: string
+    next: Piece
   }
 
   interface ExtendedPlayerFrame extends PlayerFrame {
@@ -63,6 +63,13 @@ declare global {
     | CommandPacketMoveToRoom
     | CommandPacketStartQualifier
     | CommandPacketEndQualifier
+
+  type CommandResponsePacket = {
+    type: "commandResponse"
+    message: string
+  }
+
+  type AdminPacket = CommandResponsePacket
 
   type UserData = {
     name: string

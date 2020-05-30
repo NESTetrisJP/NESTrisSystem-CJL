@@ -1,11 +1,11 @@
 import Renderer from "./renderer"
 import AudioManager from "./audio-manager"
-import DataProcessor from "./data-processor"
+import DataProcessor, { RankingData } from "./data-processor"
 const r = Renderer.getInstance()
 const a = AudioManager.getInstance()
 
 export default class GameRenderer {
-  static formatScore(score, hex) {
+  static formatScore(score: number, hex: boolean) {
     const hexStrings = ["A", "B", "C", "D", "E", "F"]
     if (hex) {
       const topDigit = Math.floor(score / 100000)
@@ -16,7 +16,7 @@ export default class GameRenderer {
     return String(score).padStart(6, "0")
   }
 
-  static renderIcon(ctx, userName) {
+  static renderIcon(ctx: CanvasRenderingContext2D, userName: string) {
     const icon = r.requestUserIcon(userName)
     if (icon != null) {
       ctx.drawImage(icon, 0, 16, 79, 79)
@@ -25,14 +25,14 @@ export default class GameRenderer {
     }
   }
 
-  static renderFieldBackground(ctx, quadTimers) {
-    if (quadTimers % 4 >= 2) {
+  static renderFieldBackground(ctx: CanvasRenderingContext2D, quadTimer: number) {
+    if (quadTimer % 4 >= 2) {
       ctx.fillStyle = "#FFF"
       ctx.fillRect(0, 0, 80, 160)
     }
   }
 
-  static renderField(ctx, field, blockColor) {
+  static renderField(ctx: CanvasRenderingContext2D, field: number[], blockColor: number) {
     field.forEach((blockId, i) => {
       const dx = ((i % 10) * 8)
       const dy = (Math.floor(i / 10) * 8)
@@ -42,7 +42,7 @@ export default class GameRenderer {
     })
   }
 
-  static renderNext(ctx, next, blockColor, size) {
+  static renderNext(ctx: CanvasRenderingContext2D, next: Piece, blockColor: number, size: number) {
     if (next == null) return
     if (size != 6 && size != 8) return
     const sourceImage = size == 6 ? r.blocks6 : r.blocks
@@ -51,7 +51,8 @@ export default class GameRenderer {
     })
   }
 
-  static renderHearts(ctx, [active, max], text, rtl) {
+  // text = -1: without / 0: auto / 1: with
+  static renderHearts(ctx: CanvasRenderingContext2D, [active, max]: [number, number], text: -1 | 0 | 1, rtl: boolean) {
     if (text == -1) {
       GameRenderer.renderHearts(ctx, [active, max], max >= 4 ? 1 : 0, rtl)
     } else if (text == 1) {
@@ -65,156 +66,156 @@ export default class GameRenderer {
     }
   }
 
-  static renderPlayerAudio(quadTimer, gameover) {
+  static renderPlayerAudio(quadTimer: number, gameover: number) {
     if (quadTimer == 1) a.quad.play()
     if (gameover == 1) a.gameover.play()
   }
 
-  static renderRoom(references: CanvasReference[][], dataProcessor: DataProcessor, roomName: string, type: number, mute: boolean, altRanking: boolean = false, rankingData?) {
-    if (type == 0) {
-      references.forEach(set => {
-        const canvasSet = new Set<CanvasRenderingContext2D>()
-        set.forEach((reference, i) => {
-          canvasSet.add(reference.context)
-        })
-        canvasSet.forEach(ctx => {
-          ctx.clearRect(0, 0, 96, 232)
-          ctx.drawImage(r.fieldTiny, 0, 0)
-        })
-        set.forEach((reference, i) => {
-          const userName = dataProcessor.getRoomUsers(roomName)[i]
-          const d = dataProcessor.getPlayerState(userName)
-          if (d != null) {
-            const ctx = reference.context
-            r.drawTextCentered(ctx, userName, 48, 216)
-            const rank = (rankingData?.userToRankIndex?.get(userName) ?? -1) + 1
-            if (altRanking) {
-              const rankString = rank.toString()
-              if (rank == 1) {
-                const topScore = rankingData.ranking[0][1]
-                const nextScore = rankingData.ranking[1] != null ? rankingData.ranking[1][1] : topScore
-                const diff = this.formatScore(topScore - nextScore, true)
-                r.drawText(ctx, `#${rankString}:+${diff}`, 8, 8)
-                ctx.globalCompositeOperation = "multiply"
-                ctx.fillStyle = "rgb(53, 202, 53)"
-                ctx.fillRect(32, 8, 56, 8)
-                ctx.globalCompositeOperation = "source-over"
-              } else {
-                const topScore = rankingData.ranking[0][1]
-                const diff = this.formatScore(topScore - d.score, true)
-                r.drawText(ctx, `#${rankString}:-${diff}`, 8, 8)
-                ctx.globalCompositeOperation = "multiply"
-                ctx.fillStyle = "rgb(255, 40, 0)"
-                ctx.fillRect(32, 8, 56, 8)
-                ctx.globalCompositeOperation = "source-over"
-              }
+  static renderRoomSingles(references: MultipleCanvasReferences[], dataProcessor: DataProcessor, roomName: RoomName, mute: boolean, altRanking: boolean = false, rankingData: RankingData = null) {
+    references.forEach(set => {
+      const canvasSet = new Set<CanvasRenderingContext2D>()
+      set.forEach((reference, i) => {
+        canvasSet.add(reference.context)
+      })
+      canvasSet.forEach(ctx => {
+        ctx.clearRect(0, 0, 96, 232)
+        ctx.drawImage(r.fieldTiny, 0, 0)
+      })
+      set.forEach((reference, i) => {
+        const userName = dataProcessor.getRoomUsers(roomName)[i]
+        const d = dataProcessor.getPlayerState(userName)
+        if (d != null) {
+          const ctx = reference.context
+          r.drawTextCentered(ctx, userName, 48, 216)
+          const rank = (rankingData?.userToRankIndex?.get(userName) ?? -1) + 1
+          if (altRanking) {
+            const rankString = rank.toString()
+            if (rank == 1) {
+              const topScore = rankingData.ranking[0][1]
+              const nextScore = rankingData.ranking[1] != null ? rankingData.ranking[1][1] : topScore
+              const diff = this.formatScore(topScore - nextScore, true)
+              r.drawText(ctx, `#${rankString}:+${diff}`, 8, 8)
+              ctx.globalCompositeOperation = "multiply"
+              ctx.fillStyle = "rgb(53, 202, 53)"
+              ctx.fillRect(32, 8, 56, 8)
+              ctx.globalCompositeOperation = "source-over"
             } else {
-              const rankString = rank.toString().padStart(2, "0")
-              const bestScoreString = GameRenderer.formatScore(d.bestScore, true)
-              r.drawText(ctx, `#${rankString}:${bestScoreString}`, 8, 8)
+              const topScore = rankingData.ranking[0][1]
+              const diff = this.formatScore(topScore - d.score, true)
+              r.drawText(ctx, `#${rankString}:-${diff}`, 8, 8)
+              ctx.globalCompositeOperation = "multiply"
+              ctx.fillStyle = "rgb(255, 40, 0)"
+              ctx.fillRect(32, 8, 56, 8)
+              ctx.globalCompositeOperation = "source-over"
             }
-            const scoreString = GameRenderer.formatScore(d.score, true)
-            const levelString = (0).toString().padStart(2, "0")
-            const linesString = d.lines.toString().padStart(3, "0")
-            r.drawText(ctx, `${scoreString}-${linesString}`, 8, 16)
+          } else {
+            const rankString = rank.toString().padStart(2, "0")
+            const bestScoreString = GameRenderer.formatScore(d.bestScore, true)
+            r.drawText(ctx, `#${rankString}:${bestScoreString}`, 8, 8)
+          }
+          const scoreString = GameRenderer.formatScore(d.score, true)
+          const levelString = (0).toString().padStart(2, "0")
+          const linesString = d.lines.toString().padStart(3, "0")
+          r.drawText(ctx, `${scoreString}-${linesString}`, 8, 16)
+          const blockColor = d.level % 10
+          ctx.save()
+          ctx.translate(8, 40)
+          GameRenderer.renderFieldBackground(ctx, d.quadTimer)
+          GameRenderer.renderIcon(ctx, userName)
+          GameRenderer.renderField(ctx, d.field, blockColor)
+          GameRenderer.renderHearts(ctx, dataProcessor.getPlayerInfo(userName).hearts, -1, false)
+          ctx.restore()
+          ctx.save()
+          ctx.translate(64, 42)
+          GameRenderer.renderNext(ctx, d.next, blockColor, 6)
+          ctx.restore()
+          if (!mute) GameRenderer.renderPlayerAudio(d.quadTimer, d.gameover)
+        }
+      })
+    })
+  }
+
+  static renderRoomDoubles(references: MultipleCanvasReferencesWithPosition[], dataProcessor: DataProcessor, roomName: RoomName, mute: boolean) {
+    references.forEach(set => {
+      // Note: (ctxA, 0), (ctxA, 1), (ctxB, 0), (ctxB, 1), ...の順番に並んでいること
+      set.forEach((reference, i) => {
+        const userName = dataProcessor.getRoomUsers(roomName)[i]
+        const ctx = reference.context
+        const position = reference.position
+        if (position == 0) {
+          ctx.clearRect(0, 0, 256, 224)
+          ctx.drawImage(r.field2P, 0, 0)
+        }
+        const d = dataProcessor.getPlayerState(userName)
+        if (d != null) {
+          if (position == 0) {
+            r.drawText(ctx, GameRenderer.formatScore(d.score, false).padEnd(8, " "), 96, 40)
+            r.drawText(ctx, String(d.lines).padStart(3, "0"), 96, 88)
+            r.drawText(ctx, String(d.level).padStart(2, "0"), 96, 120)
+            r.drawTextCentered(ctx, userName, 48, 208)
             const blockColor = d.level % 10
             ctx.save()
-            ctx.translate(8, 40)
+            ctx.translate(8, 32)
             GameRenderer.renderFieldBackground(ctx, d.quadTimer)
             GameRenderer.renderIcon(ctx, userName)
             GameRenderer.renderField(ctx, d.field, blockColor)
-            GameRenderer.renderHearts(ctx, dataProcessor.getPlayerInfo(userName).hearts, -1, false)
             ctx.restore()
             ctx.save()
-            ctx.translate(64, 42)
-            GameRenderer.renderNext(ctx, d.next, blockColor, 6)
+            ctx.translate(32, 8)
+            GameRenderer.renderNext(ctx, d.next, blockColor, 8)
             ctx.restore()
-            if (!mute) GameRenderer.renderPlayerAudio(d.quadTimer, d.gameover)
+            ctx.save()
+            ctx.translate(92, 208)
+            GameRenderer.renderHearts(ctx, dataProcessor.getPlayerInfo(userName).hearts, -1, false)
+            ctx.restore()
           }
-        })
-      })
-    } else if (type == 1) {
-      references.forEach(set => {
-        // Note: (ctxA, 0), (ctxA, 1), (ctxB, 0), (ctxB, 1), ...の順番に並んでいること
-        set.forEach((reference, i) => {
-          const userName = dataProcessor.getRoomUsers(roomName)[i]
-          const ctx = reference.context
-          const position = reference.position
-          if (position == 0) {
-            ctx.clearRect(0, 0, 256, 224)
-            ctx.drawImage(r.field2P, 0, 0)
+          if (position == 1) {
+            r.drawText(ctx, GameRenderer.formatScore(d.score, false).padStart(8, " "), 96, 56)
+            r.drawText(ctx, String(d.lines).padStart(3, "0"), 136, 88)
+            r.drawText(ctx, String(d.level).padStart(2, "0"), 144, 120)
+            r.drawTextCentered(ctx, userName, 208, 208)
+            const blockColor = d.level % 10
+            ctx.save()
+            ctx.translate(168, 32)
+            GameRenderer.renderFieldBackground(ctx, d.quadTimer)
+            GameRenderer.renderIcon(ctx, userName)
+            GameRenderer.renderField(ctx, d.field, blockColor)
+            ctx.restore()
+            ctx.save()
+            ctx.translate(192, 8)
+            GameRenderer.renderNext(ctx, d.next, blockColor, 8)
+            ctx.restore()
+            ctx.save()
+            ctx.translate(156, 208)
+            GameRenderer.renderHearts(ctx, dataProcessor.getPlayerInfo(userName).hearts, -1, true)
+            ctx.restore()
           }
-          const d = dataProcessor.getPlayerState(userName)
-          if (d != null) {
-            if (position == 0) {
-              r.drawText(ctx, GameRenderer.formatScore(d.score, false).padEnd(8, " "), 96, 40)
-              r.drawText(ctx, String(d.lines).padStart(3, "0"), 96, 88)
-              r.drawText(ctx, String(d.level).padStart(2, "0"), 96, 120)
-              r.drawTextCentered(ctx, userName, 48, 208)
-              const blockColor = d.level % 10
-              ctx.save()
-              ctx.translate(8, 32)
-              GameRenderer.renderFieldBackground(ctx, d.quadTimer)
-              GameRenderer.renderIcon(ctx, userName)
-              GameRenderer.renderField(ctx, d.field, blockColor)
-              ctx.restore()
-              ctx.save()
-              ctx.translate(32, 8)
-              GameRenderer.renderNext(ctx, d.next, blockColor, 8)
-              ctx.restore()
-              ctx.save()
-              ctx.translate(92, 208)
-              GameRenderer.renderHearts(ctx, dataProcessor.getPlayerInfo(userName).hearts, -1, false)
-              ctx.restore()
-            }
-            if (position == 1) {
-              r.drawText(ctx, GameRenderer.formatScore(d.score, false).padStart(8, " "), 96, 56)
-              r.drawText(ctx, String(d.lines).padStart(3, "0"), 136, 88)
-              r.drawText(ctx, String(d.level).padStart(2, "0"), 144, 120)
-              r.drawTextCentered(ctx, userName, 208, 208)
-              const blockColor = d.level % 10
-              ctx.save()
-              ctx.translate(168, 32)
-              GameRenderer.renderFieldBackground(ctx, d.quadTimer)
-              GameRenderer.renderIcon(ctx, userName)
-              GameRenderer.renderField(ctx, d.field, blockColor)
-              ctx.restore()
-              ctx.save()
-              ctx.translate(192, 8)
-              GameRenderer.renderNext(ctx, d.next, blockColor, 8)
-              ctx.restore()
-              ctx.save()
-              ctx.translate(156, 208)
-              GameRenderer.renderHearts(ctx, dataProcessor.getPlayerInfo(userName).hearts, -1, true)
-              ctx.restore()
-            }
-            if (!mute) GameRenderer.renderPlayerAudio(d.quadTimer, d.gameover)
-          }
-        })
-        const reference = set[0]
-        const ctx = reference.context
-        const userName1 = dataProcessor.getRoomUsers(roomName)[0]
-        const userName2 = dataProcessor.getRoomUsers(roomName)[1]
-        const d1 = dataProcessor.getPlayerState(userName1)
-        const d2 = dataProcessor.getPlayerState(userName2)
-        if (d1 != null && d2 != null) {
-          const p1Char = d1.score > d2.score ? "<" : " "
-          const p2Char = d2.score > d1.score ? ">" : " "
-          r.drawText(ctx, p1Char + GameRenderer.formatScore(Math.abs(d1.score - d2.score), false) + p2Char, 96, 48)
-          ctx.globalCompositeOperation = "multiply"
-          if (d1.score == d2.score) {
-            ctx.fillStyle = "rgb(250, 245, 0)"
-          } else {
-            ctx.fillStyle = "rgb(53, 202, 53)"
-          }
-          ctx.fillRect(96, 48, 64, 8)
-          ctx.globalCompositeOperation = "source-over"
+          if (!mute) GameRenderer.renderPlayerAudio(d.quadTimer, d.gameover)
         }
       })
-    }
+      const reference = set[0]
+      const ctx = reference.context
+      const userName1 = dataProcessor.getRoomUsers(roomName)[0]
+      const userName2 = dataProcessor.getRoomUsers(roomName)[1]
+      const d1 = dataProcessor.getPlayerState(userName1)
+      const d2 = dataProcessor.getPlayerState(userName2)
+      if (d1 != null && d2 != null) {
+        const p1Char = d1.score > d2.score ? "<" : " "
+        const p2Char = d2.score > d1.score ? ">" : " "
+        r.drawText(ctx, p1Char + GameRenderer.formatScore(Math.abs(d1.score - d2.score), false) + p2Char, 96, 48)
+        ctx.globalCompositeOperation = "multiply"
+        if (d1.score == d2.score) {
+          ctx.fillStyle = "rgb(250, 245, 0)"
+        } else {
+          ctx.fillStyle = "rgb(53, 202, 53)"
+        }
+        ctx.fillRect(96, 48, 64, 8)
+        ctx.globalCompositeOperation = "source-over"
+      }
+    })
   }
 
-  static renderQualifierRanking(references: CanvasReference[], rankingData, time) {
+  static renderQualifierRanking(references: MultipleCanvasReferences, rankingData: RankingData, time: number) {
     references.forEach(reference => {
       const ctx = reference.context
       ctx.clearRect(0, 0, 104, 254)
@@ -241,7 +242,7 @@ export default class GameRenderer {
     })
   }
 
-  static renderAward(references: CanvasReference[], userName) {
+  static renderAward(references: MultipleCanvasReferences, userName: string) {
     references.forEach(reference => {
       const ctx = reference.context
       ctx.clearRect(0, 0, 128, 160)

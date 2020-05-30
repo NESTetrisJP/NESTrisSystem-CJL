@@ -1,17 +1,25 @@
 declare global {
-  type CanvasReference = {
-    context: CanvasRenderingContext2D,
-    position: number
+  type SingleCanvasReference = {
+    context: CanvasRenderingContext2D
   }
 
+  type MultipleCanvasReferences = {
+    context: CanvasRenderingContext2D
+  }[]
+
+  type MultipleCanvasReferencesWithPosition = {
+    context: CanvasRenderingContext2D,
+    position: number
+  }[]
+
   type CanvasReferences = {
-    "default": CanvasReference[][]
-    "qualifier": CanvasReference[][]
-    "qualifier-ranking": CanvasReference[]
-    "1v1a": CanvasReference[][]
-    "1v1b": CanvasReference[][]
-    "1v1v1": CanvasReference[][]
-    "award": CanvasReference[]
+    "default": MultipleCanvasReferences[]
+    "qualifier": MultipleCanvasReferences[]
+    "qualifier-ranking": SingleCanvasReference[]
+    "1v1a": MultipleCanvasReferencesWithPosition[]
+    "1v1b": MultipleCanvasReferencesWithPosition[]
+    "1v1v1": MultipleCanvasReferences[]
+    "award": SingleCanvasReference[]
   }
 }
 

@@ -150,7 +150,7 @@ export default class Renderer {
   }
   */
 
-  drawText(ctx, str, dx, dy) {
+  drawText(ctx: CanvasRenderingContext2D, str: string, dx: number, dy: number) {
     let x = 0
     for (let i = 0; i < str.length; i++) {
       const code = str.charCodeAt(i)
@@ -167,11 +167,11 @@ export default class Renderer {
     }
   }
 
-  drawTextCentered(ctx, str, dx, dy) {
+  drawTextCentered(ctx: CanvasRenderingContext2D, str: string, dx: number, dy: number) {
     this.drawText(ctx, str, dx - str.length * 4, dy)
   }
 
-  drawTextRTL(ctx, str, dx, dy) {
+  drawTextRTL(ctx: CanvasRenderingContext2D, str: string, dx: number, dy: number) {
     this.drawText(ctx, str, dx - str.length * 8, dy)
   }
 

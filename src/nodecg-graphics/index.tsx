@@ -1,4 +1,4 @@
-import { h, app } from "hyperapp"
+import { h, app, Dispatch, Action, EffectFunction } from "hyperapp"
 import { Mutex } from "await-semaphore"
 import ReplicantManager from "../common-nodecg-dom/replicant-manager"
 import Renderer from "../common-dom/renderer"
@@ -11,21 +11,39 @@ import BracketRenderer from "../common-nodecg-dom/bracket-renderer"
 const r = Renderer.getInstance()
 const a = AudioManager.getInstance()
 
-const replicantManager = new ReplicantManager({
-  messages: {
-    "changeScene": (dispatch, to) => {
+
+type State = {
+  nodecg: Pick<ReplicantTypes, "awardedPlayer" | "footer" | "titleMessage">
+  currentView: string
+  transitionTo: string
+  transitionPhase: number
+  footer: string
+  roomPlayers: RoomPlayers
+}
+
+type RoomPlayers = { [key in RoomName]: number }
+
+const replicantManager = new ReplicantManager(
+  [
+    "awardedPlayer",
+    "footer",
+    "titleMessage"
+  ], {
+    "changeScene": (dispatch: Dispatch<State, string>, to: string) => {
+    // "changeScene": (dispatch: Dispatch<State, string>, to: string) => {
       dispatch(startTransition, to)
     },
-    "reloadIcons": (dispatch) => {
+    "reloadIcons": (dispatch: (obj: Dispatchable<State, any, any>) => void) => {
       dispatch(reloadIcons)
     },
-    "updateCanvasContexts": (dispatch) => {
+    "updateCanvasContexts": (dispatch: Dispatch<State>) => {
       dispatch(updateCanvasContexts)
     }
   }
-})
+)
+replicantManager.messageSubscriptions["changeScene"]
 
-const updateTransition = (state, phase) => {
+const updateTransition: Action<State, number> = (state, phase) => {
   if (phase == 8) {
     return {
       ...state,
@@ -40,7 +58,7 @@ const updateTransition = (state, phase) => {
   }
 }
 
-const reloadIcons = (state) => {
+const reloadIcons: Action<State> = state => {
   r.userIcons.clear()
   return state
 }
@@ -55,7 +73,7 @@ let canvasContexts: CanvasReferences = {
   "award": []
 }
 
-let bracketCanvasContexts = {
+let bracketCanvasContexts: BracketCanvasReferences = {
   "group-a": null,
   "group-b": null,
   "bracket": null,
@@ -63,8 +81,13 @@ let bracketCanvasContexts = {
 
 const bracketRenderer = new BracketRenderer()
 
-const updateCanvasContexts = (state) => {
-  const result = {
+/**
+ * Finds <canvas> elements from real DOM and stores their contexts to canvasContexts.
+ * Should be called when any <canvas> has been newly created or deleted.
+ * @param state current Hyperapp state
+ */
+const updateCanvasContexts: Action<State> = (state) => {
+  const result: CanvasReferences = {
     "default": [],
     "qualifier": [],
     "qualifier-ranking": [],
@@ -74,7 +97,7 @@ const updateCanvasContexts = (state) => {
     "award": []
   }
 
-  const resultBracket = {
+  const resultBracket: BracketCanvasReferences = {
     "group-a": null,
     "group-b": null,
     "bracket": null,
@@ -86,7 +109,7 @@ const updateCanvasContexts = (state) => {
         const elements = Array.from(document.querySelectorAll<HTMLCanvasElement>(`#${view}>.game-container>canvas`))
         result["qualifier"].push(elements.map(e => ({ context: e.getContext("2d"), position: null })))
         const rankingElement = document.querySelector<HTMLCanvasElement>(`#${view}>.ranking`)
-        if (rankingElement != null) result["qualifier-ranking"].push(({ context: rankingElement.getContext("2d"), position: null }))
+        if (rankingElement != null) result["qualifier-ranking"].push(({ context: rankingElement.getContext("2d") }))
       }
       break
       case "game-1v1": {
@@ -115,12 +138,12 @@ const updateCanvasContexts = (state) => {
       break
       case "game-1v1v1": {
         const elements = Array.from(document.querySelectorAll<HTMLCanvasElement>(`#${view}>.game-container>canvas`))
-        result["1v1v1"].push(elements.map(e => ({ context: e.getContext("2d"), position: null })))
+        result["1v1v1"].push(elements.map(e => ({ context: e.getContext("2d") })))
       }
       break
       case "game-award": {
         const element = document.querySelector<HTMLCanvasElement>(`#${view}>.award`)
-        if (element != null) result["award"].push({ context: element.getContext("2d"), position: null })
+        if (element != null) result["award"].push({ context: element.getContext("2d") })
       }
       break
       case "bracket-group-a": {
@@ -146,17 +169,20 @@ const updateCanvasContexts = (state) => {
   return state
 }
 
-const updateCanvasContextsEffect = dispatch => {
+/**
+ * Calls updateCanvasContexts after 100ms
+ * TODO: this is a dirty and unreliable hack!
+ * @param dispatch Hyperapp dispatch
+ */
+const updateCanvasContextsEffect: EffectFunction<State> = dispatch => {
   setTimeout(() => dispatch(updateCanvasContexts), 100)
 }
 
 let onServerMessageCallback: Function = null
 
-const onServerMessage = (state, data) => {
-  const roomPlayers = {
-    "all": data.users.length
-  }
-  Object.keys(data.rooms).forEach(room => {
+const onServerMessage: Action<State, ServerPacket> = (state, data) => {
+  const roomPlayers = {} as RoomPlayers
+  (Object.keys(data.rooms) as RoomName[]).forEach(room => {
     roomPlayers[room] = data.rooms[room].length
   })
 
@@ -169,12 +195,12 @@ const onServerMessage = (state, data) => {
   }, [updateCanvasContextsEffect]]
 }
 
-const onServerMessageEffect = (dispatch) => {
-  onServerMessageCallback = (data) => dispatch(onServerMessage, data)
-  return () => onServerMessageCallback = null
+const onServerMessageEffect: EffectFunction<State> = dispatch => {
+  onServerMessageCallback = (data: ServerPacket) => dispatch(onServerMessage, data)
+  return (): void => onServerMessageCallback = null
 }
 
-const transitionEffect = dispatch => {
+const transitionEffect: EffectFunction<State> = dispatch => {
   updateCanvasContextsEffect(dispatch)
   let phase = 0
   const fun = () => {
@@ -186,7 +212,7 @@ const transitionEffect = dispatch => {
   setTimeout(fun, 50)
 }
 
-const startTransition = (state, to) => {
+const startTransition: Action<State, string> = (state, to) => {
   if (state.currentView == to || state.transitionPhase != -1) return state
   return [{
     ...state,
@@ -195,7 +221,7 @@ const startTransition = (state, to) => {
   }, [transitionEffect]]
 }
 
-const calculateClip = (state, viewName) => {
+const calculateClip = (state: State, viewName: string) => {
   const b = -120 + state.transitionPhase * 270 + 135
   if (state.currentView == viewName) {
     return {
@@ -212,7 +238,7 @@ const calculateClip = (state, viewName) => {
   }
 }
 
-const constructGameElement = (state, type) => {
+const constructGameElement = (state: State, type: string) => {
   const id = `game-${type}`
   const inner = () => {
     switch(type) {
@@ -268,7 +294,7 @@ const constructGameElement = (state, type) => {
   </div>
 }
 
-const constructScreen = (state, id, innerElements) => {
+const constructScreen = (state: State, id: string, innerElements: JSX.Element[]) => {
   return <div id={id} style={{ ...calculateClip(state, id) }}>
     {(state.currentView == id || state.transitionTo == id) && [
       innerElements,
@@ -282,7 +308,7 @@ let currentState: any = {}
 Promise.all([
   replicantManager.initialize(),
 ]).then(([replicantInitialStates]) => {
-  app({
+  app<State>({
     init: [
       {
         nodecg: replicantInitialStates,
@@ -291,7 +317,7 @@ Promise.all([
         transitionPhase: -1,
         footer: "予選スコアアタック",
         roomPlayers: {}
-      }
+      } as State
     ],
     view: state => (
       <div id="root">
@@ -334,17 +360,18 @@ Promise.all([
             <button onClick={[startTransition, "game-award"]}>award</button>
           </div>
         }
-        { /* Expose current state */ (() => { currentState = state; return null })() }
+        { /* Expose current state */ (() => { currentState = state; return false })() }
       </div>
     ),
     subscriptions: state => [
       ...replicantManager.getSubscriptions(),
-      [onServerMessageEffect, {}]
+      [onServerMessageEffect]
     ],
     node: document.querySelector("#root")
   })
 })
 
+let webSocket: WebSocket = null
 const dataProcessor = new DataProcessor()
 
 const newConnection = () => {
@@ -374,23 +401,21 @@ const newConnection = () => {
   return sock
 }
 
-let webSocket = newConnection()
-
 Promise.all([
   r.initialize(),
   a.initialize(),
   bracketRenderer.initialize()
 ]).then(() => {
-  updateCanvasContexts({ currentView: "title", transitionTo: null })
+  updateCanvasContexts({ currentView: "title", transitionTo: null } as State)
   const onFrame = () => {
     dataProcessor.onRender()
     const qualifierRanking = dataProcessor.getRankingOfRoom("qualifier", true)
     const _1v1v1Ranking = dataProcessor.getRankingOfRoom("1v1v1", false)
 
-    GameRenderer.renderRoom(canvasContexts["qualifier"], dataProcessor, "qualifier", 0, false, false, qualifierRanking)
-    GameRenderer.renderRoom(canvasContexts["1v1a"], dataProcessor, "1v1a", 1, false)
-    GameRenderer.renderRoom(canvasContexts["1v1b"], dataProcessor, "1v1b", 1, false)
-    GameRenderer.renderRoom(canvasContexts["1v1v1"], dataProcessor, "1v1v1", 0, false, true, _1v1v1Ranking)
+    GameRenderer.renderRoomSingles(canvasContexts["qualifier"], dataProcessor, "qualifier", false, false, qualifierRanking)
+    GameRenderer.renderRoomDoubles(canvasContexts["1v1a"], dataProcessor, "1v1a", false)
+    GameRenderer.renderRoomDoubles(canvasContexts["1v1b"], dataProcessor, "1v1b", false)
+    GameRenderer.renderRoomSingles(canvasContexts["1v1v1"], dataProcessor, "1v1v1", false, true, _1v1v1Ranking)
     GameRenderer.renderQualifierRanking(canvasContexts["qualifier-ranking"], qualifierRanking, dataProcessor.qualifyTime)
     GameRenderer.renderAward(canvasContexts["award"], currentState.nodecg?.awardedPlayer)
     bracketRenderer.render(bracketCanvasContexts["group-a"], "group-a")

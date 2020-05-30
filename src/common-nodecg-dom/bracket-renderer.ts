@@ -5,6 +5,14 @@ import GameRenderer from "../common-dom/game-renderer"
 import DataProcessor from "../common-dom/data-processor"
 const r = Renderer.getInstance()
 
+declare global {
+  type BracketCanvasReferences = {
+    "group-a": CanvasRenderingContext2D
+    "group-b": CanvasRenderingContext2D
+    "bracket": CanvasRenderingContext2D
+  }
+}
+
 export default class BracketRenderer {
   static rankColors = [
     "rgb(53, 202, 53)",
@@ -84,7 +92,7 @@ export default class BracketRenderer {
         r.drawTextCentered(ctx, data.players[i], 44 + i * 72, 16)
       })
       data.games.forEach((scores, i) => {
-        const scoreData = []
+        const scoreData: [string, number][] = []
         scores.forEach((score, j) => {
           if (score != null) scoreData.push([String(j), score])
         })

@@ -7,15 +7,15 @@ declare global {
   type NodeCG = CreateNodecgInstance<
     "ctwc-japan-lite",
     any,
-    ReplicantMap,
-    MessageMap
+    ReplicantTypes,
+    MessageTypes
   >
   namespace NodeCG {
-    type Replicant<K extends keyof(ReplicantMap)> = Replicant_<
+    type Replicant<K extends keyof(ReplicantTypes)> = Replicant_<
       "ctwc-japan-lite",
-      ReplicantMap,
+      ReplicantTypes,
       K,
-      ReplicantMap[K]
+      ReplicantTypes[K]
     >
   }
 }

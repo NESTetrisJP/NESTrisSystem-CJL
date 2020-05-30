@@ -11,7 +11,7 @@ export = function (nodecg: NodeCG) {
 			serverActive.value = true
 			const rl = readline.createInterface(socket)
 
-			const onData = data => {
+			const onData = (data: AdminPacket) => {
 				if (data.type == "commandResponse") {
 					nodecg.sendMessage("serverCommandResponse", { type: "server", message: data.message })
 				}
@@ -61,12 +61,13 @@ export = function (nodecg: NodeCG) {
 		}
 	}, 1000)
 
+	// TODO: to be more strictly typed
 	nodecg.listenFor("serverCommand", (data) => {
 		const split = (data.match(/(\\.|[^ ])+/g) ?? []).map(s => s.replace(/\\ /g, " ").replace(/\\\\/g, "\\"))
-		const response = (message) => nodecg.sendMessage("serverCommandResponse", { type: "nodecg", message })
-		const command = (argNames, process) => {
+		const response = (message: string) => nodecg.sendMessage("serverCommandResponse", { type: "nodecg", message })
+		const command = <A extends string>(argNames: A[], process: (args: { [key in A]: any }) => void) => {
 			if (split.length - 1 == argNames.length) {
-				const args = {}
+				const args = {} as { [key in A]: any }
 				argNames.forEach((name, i) => args[name] = split[i + 1])
 				process(args)
 			} else {

@@ -19,15 +19,32 @@ declare global {
       wins: [-1 | 0 | 1, -1 | 0 | 1]
     }
   }
-
-  type ReplicantMap = {
-    "bracketData": BracketData
-
+  type ServerCommandResponse = {
+    type: "client" | "nodecg" | "server"
+    message: string
   }
 
-  type MessageMap = {
-
+  type ReplicantTypes = {
+    bracketData: string
+    serverActive: boolean
+    footer: string
+    titleMessage: string
+    awardedPlayer: string
   }
+
+  type ReplicantNames = keyof ReplicantTypes
+
+  type MessageTypes = {
+    changeScene: { data: string }
+    reloadIcons: { data: void }
+    updateCanvasContexts: { data: void }
+    serverCommand: { data: string }
+    serverCommandResponse: { data: ServerCommandResponse }
+  }
+
+  type MessageNames = keyof MessageTypes
+  // type MessageDataTypes = { [key in MessageNames]: MessageTypes[key] extends { data: any } ? MessageTypes[key]["data"] : void }
+  type MessageDataTypes = { [key in MessageNames]: MessageTypes[key]["data"] }
 }
 
 export {}
